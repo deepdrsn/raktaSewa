@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">RaktaSewa</string>
+
+    <!-- Blood Types -->
+    <string-array name="blood_types">
+        <item>Select Blood Type</item>
+        <item>A+</item>
+        <item>A-</item>
+        <item>B+</item>
+        <item>B-</item>
+        <item>AB+</item>
+        <item>AB-</item>
+        <item>O+</item>
+        <item>O-</item>
+    </string-array>
+
+    <!-- Gender Options -->
+    <string-array name="gender_options">
+        <item>Select Gender</item>
+        <item>Male</item>
+        <item>Female</item>
+        <item>Other</item>
+    </string-array>
+
+    <!-- Request Types -->
+    <string-array name="request_types">
+        <item>Normal</item>
+        <item>Emergency</item>
+    </string-array>
 </resources>

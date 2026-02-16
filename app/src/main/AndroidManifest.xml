@@ -1,19 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    package="com.example.raktasewa">
 
     <application
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RaktaSewa"
-    <activity android:name=".ui.login.LoginActivity"/>
-    <activity android:name=".ui.login.LoginActivity"/>
-    <activity android:name=".ui.register.RegisterActivity"/>
-    />
+        android:theme="@style/AppTheme">
+
+        <!-- Landing Activity (you had this but it's not in manifest) -->
+        <activity
+            android:name=".LandingActivity"
+            android:exported="true" />
+
+        <!-- New entry point for registration -->
+        <activity
+            android:name=".ui.ChooseRoleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:exported="true" />
+
+        <!-- Your existing Donor registration activity -->
+        <activity
+            android:name=".ui.register.RegisterActivity"
+            android:exported="false" />
+
+        <!-- Add the new Seeker registration activity -->
+        <activity
+            android:name=".ui.register.RegisterSeekerActivity"
+            android:exported="false" />
+
+        <!-- New activities we created -->
+        <activity
+            android:name=".DashboardActivity"
+            android:exported="false"
+            android:parentActivityName=".LandingActivity" />
+
+        <activity
+            android:name=".CreateRequestActivity"
+            android:exported="false"
+            android:parentActivityName=".DashboardActivity" />
+
+        <activity
+            android:name=".ViewRequestsActivity"
+            android:exported="false"
+            android:parentActivityName=".DashboardActivity" />
+
+        <activity
+            android:name=".DonorListActivity"
+            android:exported="false"
+            android:parentActivityName=".DashboardActivity" />
+
+        <!-- Optional: Profile Activity (if you create it) -->
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false"
+            android:parentActivityName=".DashboardActivity" />
+
+    </application>
+
+    <!-- Add necessary permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
 </manifest>

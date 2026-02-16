@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "98599538245",
+    "project_id": "raktasewa-7e13c",
+    "storage_bucket": "raktasewa-7e13c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:98599538245:android:9d0568cf634263be7c5d2c",
+        "android_client_info": {
+          "package_name": "com.example.raktasewa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArTCP8H2gDclUfpz3fbpJbh8iYSwmGhT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

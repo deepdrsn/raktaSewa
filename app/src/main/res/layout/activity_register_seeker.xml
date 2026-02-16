@@ -36,7 +36,7 @@
 
         <EditText
             android:id="@+id/etPhone"
-            android:hint="Phone Number"
+            android:hint="Phone"
             android:inputType="phone"
             android:layout_marginTop="8dp"
             android:layout_width="match_parent"
@@ -50,25 +50,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
-        <EditText
-            android:id="@+id/etLastDonated"
-            android:hint="Last Donated Date (Optional)"
-            android:inputType="date"
+        <Spinner
+            android:id="@+id/spinnerGender"
             android:layout_marginTop="8dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
-
-        <Spinner
-            android:id="@+id/spinnerBloodType"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"/>
-
-        <Spinner
-            android:id="@+id/spinnerGender"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"/>
 
         <Button
             android:id="@+id/btnRegister"
@@ -77,7 +63,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
-        <!-- Add a TextView to allow users to go to the Login screen -->
         <TextView
             android:id="@+id/tvLogin"
             android:layout_width="wrap_content"

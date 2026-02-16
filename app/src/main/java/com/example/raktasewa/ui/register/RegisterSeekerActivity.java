@@ -24,76 +24,71 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterSeekerActivity extends AppCompatActivity {
 
-    public static final String TAG = "RegisterDonorActivity";
+    public static final String TAG = "RegisterSeekerActivity";
 
-    // UI components
-    EditText etName, etEmail, etPassword, etPhone, etAddress, etLastDonated;
-    Spinner spinnerBloodType, spinnerGender;
+    EditText etName, etEmail, etPassword, etPhone, etAddress;
+    Spinner spinnerGender;
     Button btnRegister;
     TextView tvLogin;
     ProgressBar progressBar;
 
-    // Firebase services
     FirebaseAuth fAuth;
     FirebaseFirestore fStore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_register);
+        setContentView(R.layout.activity_register_seeker);
 
-        // 1. Initialize UI components
+        initializeUI();
+        setupSpinners();
+        initializeFirebase();
+        setupClickListeners();
+    }
+
+    private void initializeUI() {
         etName = findViewById(R.id.etName);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         etPhone = findViewById(R.id.etPhone);
         etAddress = findViewById(R.id.etAddress);
-        etLastDonated = findViewById(R.id.etLastDonated);
-        spinnerBloodType = findViewById(R.id.spinnerBloodType);
         spinnerGender = findViewById(R.id.spinnerGender);
         btnRegister = findViewById(R.id.btnRegister);
         tvLogin = findViewById(R.id.tvLogin);
         progressBar = findViewById(R.id.progressBar);
+    }
 
-        // Setup Spinners (You need to add these string-arrays to res/values/strings.xml)
-        ArrayAdapter<CharSequence> bloodAdapter = ArrayAdapter.createFromResource(this,
-                R.array.blood_types, android.R.layout.simple_spinner_item);
-        bloodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerBloodType.setAdapter(bloodAdapter);
-
+    private void setupSpinners() {
         ArrayAdapter<CharSequence> genderAdapter = ArrayAdapter.createFromResource(this,
                 R.array.gender_options, android.R.layout.simple_spinner_item);
         genderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerGender.setAdapter(genderAdapter);
+    }
 
-        // 2. Initialize Firebase instances
+    private void initializeFirebase() {
         fAuth = FirebaseAuth.getInstance();
         fStore = FirebaseFirestore.getInstance();
+    }
 
-        // 3. Set click listener for the Register button
-        btnRegister.setOnClickListener(v -> registerUser());
-
-        // 4. Set listener for the login TextView
+    private void setupClickListeners() {
+        btnRegister.setOnClickListener(v -> registerSeeker());
         tvLogin.setOnClickListener(v -> {
             startActivity(new Intent(getApplicationContext(), LoginActivity.class));
             finish();
         });
     }
 
-    private void registerUser() {
-        // Get text from all fields
+    private void registerSeeker() {
         String nameStr = etName.getText().toString().trim();
         String emailStr = etEmail.getText().toString().trim();
         String passwordStr = etPassword.getText().toString().trim();
         String phoneStr = etPhone.getText().toString().trim();
         String addressStr = etAddress.getText().toString().trim();
-        String lastDonatedStr = etLastDonated.getText().toString().trim();
-        String bloodTypeStr = spinnerBloodType.getSelectedItem().toString();
         String genderStr = spinnerGender.getSelectedItem().toString();
 
-        // --- Validation ---
+        // Validation
         if (TextUtils.isEmpty(nameStr)) {
             etName.setError("Full Name is Required.");
             return;
@@ -102,50 +97,58 @@ public class RegisterActivity extends AppCompatActivity {
             etEmail.setError("Email is Required.");
             return;
         }
-        if (TextUtils.isEmpty(passwordStr) || passwordStr.length() < 6) {
-            etPassword.setError("Password must be >= 6 characters.");
+        if (TextUtils.isEmpty(passwordStr)) {
+            etPassword.setError("Password is Required.");
+            return;
+        }
+        if (passwordStr.length() < 6) {
+            etPassword.setError("Password must be at least 6 characters.");
             return;
         }
         if (TextUtils.isEmpty(phoneStr)) {
             etPhone.setError("Phone Number is Required.");
             return;
         }
-        // Add more validation as needed...
+        if (genderStr.equals("Select Gender")) {
+            Toast.makeText(this, "Please select gender", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         progressBar.setVisibility(View.VISIBLE);
 
-        // --- Firebase Operations ---
         fAuth.createUserWithEmailAndPassword(emailStr, passwordStr)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        Toast.makeText(RegisterActivity.this, "User Created.", Toast.LENGTH_SHORT).show();
-
                         String userID = fAuth.getCurrentUser().getUid();
                         DocumentReference documentReference = fStore.collection("users").document(userID);
 
-                        // Create a detailed user data map
                         Map<String, Object> user = new HashMap<>();
-                        user.put("role", "donor"); // Hardcode the role
+                        user.put("role", "seeker");
                         user.put("fullName", nameStr);
                         user.put("email", emailStr);
                         user.put("phone", phoneStr);
                         user.put("address", addressStr);
-                        user.put("bloodType", bloodTypeStr);
                         user.put("gender", genderStr);
-                        user.put("lastDonatedDate", lastDonatedStr);
+                        user.put("createdAt", System.currentTimeMillis());
 
-                        // Save the user data to Firestore
                         documentReference.set(user)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "onSuccess: Donor Profile created for " + userID))
-                                .addOnFailureListener(e -> Log.w(TAG, "onFailure: Error creating profile", e));
-
-                        // Redirect to LoginActivity
-                        startActivity(new Intent(getApplicationContext(), LoginActivity.class));
-                        finishAffinity(); // Close all registration-related activities
-
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Seeker profile created for: " + userID);
+                                    Toast.makeText(RegisterSeekerActivity.this,
+                                            "Registration Successful!", Toast.LENGTH_SHORT).show();
+                                    startActivity(new Intent(getApplicationContext(), LoginActivity.class));
+                                    finish();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.w(TAG, "Error creating profile", e);
+                                    Toast.makeText(RegisterSeekerActivity.this,
+                                            "Error creating profile.", Toast.LENGTH_SHORT).show();
+                                    progressBar.setVisibility(View.GONE);
+                                });
                     } else {
-                        // If registration fails, show an error and hide the progress bar
-                        Toast.makeText(RegisterActivity.this, "Error! " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(RegisterSeekerActivity.this,
+                                "Registration Failed: " + task.getException().getMessage(),
+                                Toast.LENGTH_LONG).show();
                         progressBar.setVisibility(View.GONE);
                     }
                 });
