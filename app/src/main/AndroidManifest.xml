@@ -10,7 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Landing Activity (you had this but it's not in manifest) -->
+        <!-- Landing Activity -->
         <activity
             android:name=".LandingActivity"
             android:exported="true">
@@ -20,7 +20,6 @@
             </intent-filter>
         </activity>
 
-        <!-- New entry point for registration -->
         <activity
             android:name=".ui.ChooseRoleActivity"
             android:exported="true" />
@@ -29,17 +28,14 @@
             android:name=".ui.login.LoginActivity"
             android:exported="true" />
 
-        <!-- Your existing Donor registration activity -->
         <activity
             android:name=".ui.register.RegisterActivity"
             android:exported="false" />
 
-        <!-- Add the new Seeker registration activity -->
         <activity
             android:name=".ui.register.RegisterSeekerActivity"
             android:exported="false" />
 
-        <!-- New activities we created -->
         <activity
             android:name=".ui.DashboardActivity"
             android:exported="false"
@@ -53,6 +49,7 @@
         <activity
             android:name=".ui.ViewRequestsActivity"
             android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
             android:parentActivityName=".ui.DashboardActivity" />
 
         <activity
@@ -60,17 +57,30 @@
             android:exported="false"
             android:parentActivityName=".ui.DashboardActivity" />
 
-        <!-- Optional: Profile Activity (if you create it) -->
         <activity
             android:name=".ui.ProfileActivity"
             android:exported="false"
             android:parentActivityName=".ui.DashboardActivity" />
 
+        <activity
+            android:name=".ui.ManageRequestsActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:parentActivityName=".ui.ProfileActivity" />
+
+        <activity
+            android:name=".ui.EditProfileActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ProfileActivity" />
+
     </application>
 
-    <!-- Add necessary permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- Location Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
 </manifest>

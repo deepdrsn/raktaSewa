@@ -13,6 +13,9 @@ public class BloodRequest {
     private String status;
     private long timestamp;
     private boolean isEmergency;
+    private double latitude;
+    private double longitude;
+    private String address;
 
     // Empty constructor needed for Firestore
     public BloodRequest() {}
@@ -53,4 +56,13 @@ public class BloodRequest {
 
     public boolean isEmergency() { return isEmergency; }
     public void setEmergency(boolean emergency) { isEmergency = emergency; }
+
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
+
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 }

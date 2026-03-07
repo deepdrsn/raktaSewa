@@ -1,6 +1,6 @@
 package com.example.raktasewa.ui;
 
-import android.content.Context; // Added: Use Context instead of specific Activity
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.view.LayoutInflater;
@@ -11,6 +11,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,24 +25,24 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-// IMPORTANT: If BloodRequest and ViewRequestsActivity are in 'com.example.raktasewa',
-// you must import them here:
-// import com.example.raktasewa.BloodRequest;
-// import com.example.raktasewa.ViewRequestsActivity;
-
 public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestViewHolder> {
 
     private List<BloodRequest> requestList;
     private String currentUserId;
     private FirebaseFirestore fStore;
-    private Context context; // Added to handle context properly
+    private Context context;
+    private boolean isManageMode;
 
-    // FIXED: Changed ViewRequestsActivity to Context for better compatibility
     public RequestAdapter(Context context, List<BloodRequest> requestList, String userId) {
+        this(context, requestList, userId, false);
+    }
+
+    public RequestAdapter(Context context, List<BloodRequest> requestList, String userId, boolean isManageMode) {
         this.context = context;
         this.requestList = requestList;
         this.currentUserId = userId;
         this.fStore = FirebaseFirestore.getInstance();
+        this.isManageMode = isManageMode;
     }
 
     @NonNull
@@ -68,7 +69,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         private TextView tvPatientName, tvHospital, tvBloodType, tvUnits, tvDate, tvAdditionalInfo;
         private Chip chipStatus, chipEmergency;
         private MaterialButton btnContact, btnViewDetails;
-        private ImageButton btnShare;
+        private ImageButton btnShare, btnDelete;
 
         public RequestViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -84,6 +85,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             btnContact = itemView.findViewById(R.id.btnContact);
             btnViewDetails = itemView.findViewById(R.id.btnViewDetails);
             btnShare = itemView.findViewById(R.id.btnShare);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
         }
 
         public void bind(BloodRequest request) {
@@ -92,11 +94,9 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             tvBloodType.setText(request.getBloodType());
             tvUnits.setText(request.getUnits() + " units needed");
 
-            // Format date
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault());
             tvDate.setText(sdf.format(new Date(request.getTimestamp())));
 
-            // Additional info
             if (request.getAdditionalInfo() != null && !request.getAdditionalInfo().isEmpty()) {
                 tvAdditionalInfo.setVisibility(View.VISIBLE);
                 tvAdditionalInfo.setText(request.getAdditionalInfo());
@@ -104,7 +104,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 tvAdditionalInfo.setVisibility(View.GONE);
             }
 
-            // Status chip colors (Ensure these colors exist in your colors.xml)
             switch (request.getStatus().toLowerCase()) {
                 case "pending":
                     chipStatus.setText("PENDING");
@@ -146,6 +145,36 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
                 context.startActivity(Intent.createChooser(shareIntent, "Share via"));
             });
+
+            // Handle delete button visibility and action
+            if (isManageMode && request.getUserId() != null && request.getUserId().equals(currentUserId)) {
+                btnDelete.setVisibility(View.VISIBLE);
+                btnDelete.setOnClickListener(v -> showDeleteConfirmation(request, getAdapterPosition()));
+            } else {
+                btnDelete.setVisibility(View.GONE);
+            }
+        }
+
+        private void showDeleteConfirmation(BloodRequest request, int position) {
+            new AlertDialog.Builder(context)
+                    .setTitle("Delete Request")
+                    .setMessage("Are you sure you want to delete this blood request?")
+                    .setPositiveButton("Delete", (dialog, which) -> deleteRequest(request, position))
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        }
+
+        private void deleteRequest(BloodRequest request, int position) {
+            fStore.collection("blood_requests").document(request.getRequestId())
+                    .delete()
+                    .addOnSuccessListener(aVoid -> {
+                        requestList.remove(position);
+                        notifyItemRemoved(position);
+                        Toast.makeText(context, "Request deleted", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(context, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
         }
     }
 }

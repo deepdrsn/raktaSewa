@@ -10,6 +10,12 @@
         <item name="android:windowBackground">@color/gray_light</item>
     </style>
 
+    <!-- Theme with no action bar for activities that use a Toolbar -->
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- For toolbar overlay -->
     <style name="ThemeOverlay.AppCompat.Dark.ActionBar" parent="">
         <item name="android:textColorPrimary">@android:color/white</item>

@@ -81,9 +81,12 @@ public class ProfileActivity extends AppCompatActivity {
             finish();
         });
 
+        btnManageRequests.setOnClickListener(v -> {
+            startActivity(new Intent(ProfileActivity.this, ManageRequestsActivity.class));
+        });
+
         // Other buttons can be implemented as needed
         btnLogDonation.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
         btnViewHistory.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
-        btnManageRequests.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
     }
 }
