@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.raktasewa.ui.login.LoginActivity;
 import com.example.raktasewa.ui.register.RegisterActivity;
+import com.example.raktasewa.ui.register.RegisterSeekerActivity;
 
 public class LandingActivity extends AppCompatActivity {
 
@@ -33,7 +34,7 @@ public class LandingActivity extends AppCompatActivity {
         });
 
         btnSeeker.setOnClickListener(v -> {
-            Intent i = new Intent(this, RegisterActivity.class);
+            Intent i = new Intent(this, RegisterSeekerActivity.class);
             i.putExtra("role", "seeker");
             startActivity(i);
         });

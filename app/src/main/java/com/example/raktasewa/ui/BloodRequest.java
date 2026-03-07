@@ -1,4 +1,4 @@
-package com.example.raktasewa;
+package com.example.raktasewa.ui;
 
 public class BloodRequest {
     private String requestId;

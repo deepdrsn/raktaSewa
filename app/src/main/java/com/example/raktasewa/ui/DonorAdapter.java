@@ -1,5 +1,10 @@
-package com.example.raktasewa;
-
+package com.example.raktasewa.ui;
+/// /////
+import android.content.Intent;
+import android.os.Bundle;
+// ... other imports ...
+import com.example.raktasewa.R;
+/// ///
 import android.content.Intent;
 import android.net.Uri;
 import android.view.LayoutInflater;

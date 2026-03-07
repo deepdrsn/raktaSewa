@@ -1,5 +1,6 @@
-package com.example.raktasewa;
+package com.example.raktasewa.ui;
 
+import android.content.Context; // Added: Use Context instead of specific Activity
 import android.content.Intent;
 import android.net.Uri;
 import android.view.LayoutInflater;
@@ -7,11 +8,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.raktasewa.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -21,13 +24,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+// IMPORTANT: If BloodRequest and ViewRequestsActivity are in 'com.example.raktasewa',
+// you must import them here:
+// import com.example.raktasewa.BloodRequest;
+// import com.example.raktasewa.ViewRequestsActivity;
+
 public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestViewHolder> {
 
     private List<BloodRequest> requestList;
     private String currentUserId;
     private FirebaseFirestore fStore;
+    private Context context; // Added to handle context properly
 
-    public RequestAdapter(ViewRequestsActivity context, List<BloodRequest> requestList, String userId) {
+    // FIXED: Changed ViewRequestsActivity to Context for better compatibility
+    public RequestAdapter(Context context, List<BloodRequest> requestList, String userId) {
+        this.context = context;
         this.requestList = requestList;
         this.currentUserId = userId;
         this.fStore = FirebaseFirestore.getInstance();
@@ -49,7 +60,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
 
     @Override
     public int getItemCount() {
-        return requestList.size();
+        return requestList != null ? requestList.size() : 0;
     }
 
     class RequestViewHolder extends RecyclerView.ViewHolder {
@@ -85,7 +96,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault());
             tvDate.setText(sdf.format(new Date(request.getTimestamp())));
 
-            // Additional info (if available)
+            // Additional info
             if (request.getAdditionalInfo() != null && !request.getAdditionalInfo().isEmpty()) {
                 tvAdditionalInfo.setVisibility(View.VISIBLE);
                 tvAdditionalInfo.setText(request.getAdditionalInfo());
@@ -93,8 +104,8 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 tvAdditionalInfo.setVisibility(View.GONE);
             }
 
-            // Status chip
-            switch (request.getStatus()) {
+            // Status chip colors (Ensure these colors exist in your colors.xml)
+            switch (request.getStatus().toLowerCase()) {
                 case "pending":
                     chipStatus.setText("PENDING");
                     chipStatus.setChipBackgroundColorResource(R.color.status_pending);
@@ -112,30 +123,18 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                     chipStatus.setChipBackgroundColorResource(R.color.status_default);
             }
 
-            // Emergency chip
-            if (request.isEmergency()) {
-                chipEmergency.setVisibility(View.VISIBLE);
-            } else {
-                chipEmergency.setVisibility(View.GONE);
-            }
+            chipEmergency.setVisibility(request.isEmergency() ? View.VISIBLE : View.GONE);
 
-            // Contact button
             btnContact.setOnClickListener(v -> {
                 Intent intent = new Intent(Intent.ACTION_DIAL);
                 intent.setData(Uri.parse("tel:" + request.getContact()));
-                v.getContext().startActivity(intent);
+                context.startActivity(intent);
             });
 
-            // View details button
             btnViewDetails.setOnClickListener(v -> {
-                // TODO: Navigate to request details activity
-                // For now, just show a toast
-                android.widget.Toast.makeText(v.getContext(),
-                        "Viewing details for " + request.getPatientName(),
-                        android.widget.Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Viewing details for " + request.getPatientName(), Toast.LENGTH_SHORT).show();
             });
 
-            // Share button
             btnShare.setOnClickListener(v -> {
                 String shareText = "URGENT: Need " + request.getBloodType() +
                         " blood for " + request.getPatientName() +
@@ -145,7 +144,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 Intent shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.setType("text/plain");
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-                v.getContext().startActivity(Intent.createChooser(shareIntent, "Share via"));
+                context.startActivity(Intent.createChooser(shareIntent, "Share via"));
             });
         }
     }
