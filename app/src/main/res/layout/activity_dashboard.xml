@@ -29,7 +29,7 @@
         android:id="@+id/btnViewRequests"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="View My Requests"
+        android:text="View Requests"
         android:layout_marginBottom="16dp"
         android:padding="16dp"/>
 

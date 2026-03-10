@@ -1,6 +1,8 @@
 package com.example.raktasewa.ui.register;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -88,37 +90,19 @@ public class RegisterSeekerActivity extends AppCompatActivity {
         String addressStr = etAddress.getText().toString().trim();
         String genderStr = spinnerGender.getSelectedItem().toString();
 
-        // Validation
-        if (TextUtils.isEmpty(nameStr)) {
-            etName.setError("Full Name is Required.");
-            return;
-        }
-        if (TextUtils.isEmpty(emailStr)) {
-            etEmail.setError("Email is Required.");
-            return;
-        }
-        if (TextUtils.isEmpty(passwordStr)) {
-            etPassword.setError("Password is Required.");
-            return;
-        }
-        if (passwordStr.length() < 6) {
-            etPassword.setError("Password must be at least 6 characters.");
-            return;
-        }
-        if (TextUtils.isEmpty(phoneStr)) {
-            etPhone.setError("Phone Number is Required.");
-            return;
-        }
-        if (genderStr.equals("Select Gender")) {
-            Toast.makeText(this, "Please select gender", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (TextUtils.isEmpty(nameStr)) { etName.setError("Required"); return; }
+        if (TextUtils.isEmpty(emailStr)) { etEmail.setError("Required"); return; }
+        if (TextUtils.isEmpty(passwordStr)) { etPassword.setError("Required"); return; }
+        if (passwordStr.length() < 6) { etPassword.setError(">= 6 chars"); return; }
+        if (TextUtils.isEmpty(phoneStr)) { etPhone.setError("Required"); return; }
 
         progressBar.setVisibility(View.VISIBLE);
 
         fAuth.createUserWithEmailAndPassword(emailStr, passwordStr)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
+                        saveLoginTimestamp(); // Save session start time
+                        
                         String userID = fAuth.getCurrentUser().getUid();
                         DocumentReference documentReference = fStore.collection("users").document(userID);
 
@@ -133,24 +117,23 @@ public class RegisterSeekerActivity extends AppCompatActivity {
 
                         documentReference.set(user)
                                 .addOnSuccessListener(aVoid -> {
-                                    Log.d(TAG, "Seeker profile created for: " + userID);
-                                    Toast.makeText(RegisterSeekerActivity.this,
-                                            "Registration Successful!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(RegisterSeekerActivity.this, "Registration Successful!", Toast.LENGTH_SHORT).show();
                                     startActivity(new Intent(getApplicationContext(), LoginActivity.class));
                                     finish();
                                 })
                                 .addOnFailureListener(e -> {
-                                    Log.w(TAG, "Error creating profile", e);
-                                    Toast.makeText(RegisterSeekerActivity.this,
-                                            "Error creating profile.", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(RegisterSeekerActivity.this, "Error creating profile.", Toast.LENGTH_SHORT).show();
                                     progressBar.setVisibility(View.GONE);
                                 });
                     } else {
-                        Toast.makeText(RegisterSeekerActivity.this,
-                                "Registration Failed: " + task.getException().getMessage(),
-                                Toast.LENGTH_LONG).show();
+                        Toast.makeText(RegisterSeekerActivity.this, "Registration Failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                         progressBar.setVisibility(View.GONE);
                     }
                 });
+    }
+
+    private void saveLoginTimestamp() {
+        SharedPreferences sharedPref = getSharedPreferences("RaktaSewaPrefs", Context.MODE_PRIVATE);
+        sharedPref.edit().putLong("lastLoginTime", System.currentTimeMillis()).apply();
     }
 }

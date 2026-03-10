@@ -1,13 +1,19 @@
 package com.example.raktasewa.ui;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -18,12 +24,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.example.raktasewa.R;
+import com.google.android.gms.location.CurrentLocationRequest;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -35,6 +45,7 @@ import java.util.Map;
 
 public class CreateRequestActivity extends AppCompatActivity {
 
+    private static final String TAG = "CreateRequestActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
 
     EditText etPatientName, etHospital, etUnits, etContact, etAdditionalInfo;
@@ -66,7 +77,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         setupSpinners();
 
         btnSubmitRequest.setOnClickListener(v -> submitRequest());
-        btnGetLocation.setOnClickListener(v -> checkLocationPermission());
+        btnGetLocation.setOnClickListener(v -> handleGetLocationClick());
     }
 
     private void initializeUI() {
@@ -95,9 +106,34 @@ public class CreateRequestActivity extends AppCompatActivity {
         spinnerRequestType.setAdapter(typeAdapter);
     }
 
+    private void handleGetLocationClick() {
+        if (!isLocationEnabled()) {
+            showLocationSettingsDialog();
+        } else {
+            checkLocationPermission();
+        }
+    }
+
+    private boolean isLocationEnabled() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    }
+
+    private void showLocationSettingsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Location Disabled")
+                .setMessage("Please enable GPS/Location to fetch your current address.")
+                .setPositiveButton("Settings", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void checkLocationPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
         } else {
@@ -112,7 +148,7 @@ public class CreateRequestActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getCurrentLocation();
             } else {
-                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permission denied. Location needed for address.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -122,34 +158,89 @@ public class CreateRequestActivity extends AppCompatActivity {
             return;
         }
 
-        tvLocationStatus.setText("Fetching location...");
+        tvLocationStatus.setText("Locating... (Make sure you are outdoors or near a window)");
+        btnGetLocation.setEnabled(false);
+
+        // Define the request
+        CurrentLocationRequest locationRequest = new CurrentLocationRequest.Builder()
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                .setDurationMillis(10000) // 10 second timeout
+                .build();
+
+        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        fusedLocationClient.getCurrentLocation(locationRequest, cancellationTokenSource.getToken())
+                .addOnSuccessListener(this, location -> {
+                    btnGetLocation.setEnabled(true);
+                    if (location != null) {
+                        updateLocationData(location);
+                    } else {
+                        Log.d(TAG, "getCurrentLocation returned null, trying lastKnownLocation");
+                        tryLastKnownLocation();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    btnGetLocation.setEnabled(true);
+                    Log.e(TAG, "Location fetch failed", e);
+                    tryLastKnownLocation();
+                });
+    }
+
+    private void tryLastKnownLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                getAddressFromLocation(latitude, longitude);
+                updateLocationData(location);
             } else {
-                tvLocationStatus.setText("Could not get location. Try again.");
-                Toast.makeText(this, "Unable to find location. Is GPS on?", Toast.LENGTH_SHORT).show();
+                tvLocationStatus.setText("Location not found. Please verify GPS is ON and try again.");
+                Toast.makeText(this, "Failed to get location. Try moving slightly or checking settings.", Toast.LENGTH_LONG).show();
             }
         });
     }
 
+    private void updateLocationData(Location location) {
+        latitude = location.getLatitude();
+        longitude = location.getLongitude();
+        Log.d(TAG, "Location updated: " + latitude + ", " + longitude);
+        getAddressFromLocation(latitude, longitude);
+    }
+
     private void getAddressFromLocation(double lat, double lon) {
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        try {
-            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address = addresses.get(0);
-                currentAddress = address.getAddressLine(0);
-                tvLocationStatus.setText("Location: " + currentAddress);
-            } else {
-                tvLocationStatus.setText("Location set (Coordinates: " + lat + ", " + lon + ")");
+        tvLocationStatus.setText("Converting coordinates to address...");
+        
+        // Geocoder should ideally run off-main-thread. Using a simple Handler for feedback.
+        new Thread(() -> {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            String resultText;
+            String addr;
+
+            try {
+                List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    addr = address.getAddressLine(0);
+                    resultText = "Location found:\n" + addr;
+                } else {
+                    addr = "Lat: " + lat + ", Lon: " + lon;
+                    resultText = "Address not found. Using coordinates:\n" + addr;
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Geocoder service failed", e);
+                addr = "Lat: " + lat + ", Lon: " + lon;
+                resultText = "Network error getting address. Using coordinates:\n" + addr;
             }
-        } catch (IOException e) {
-            tvLocationStatus.setText("Location set (Coordinates: " + lat + ", " + lon + ")");
-            e.printStackTrace();
-        }
+
+            final String finalAddr = addr;
+            final String finalStatus = resultText;
+            
+            new Handler(Looper.getMainLooper()).post(() -> {
+                currentAddress = finalAddr;
+                tvLocationStatus.setText(finalStatus);
+            });
+        }).start();
     }
 
     private void submitRequest() {
@@ -161,24 +252,13 @@ public class CreateRequestActivity extends AppCompatActivity {
         String bloodType = spinnerBloodType.getSelectedItem().toString();
         String requestType = spinnerRequestType.getSelectedItem().toString();
 
-        if (TextUtils.isEmpty(patientName)) {
-            etPatientName.setError("Patient name is required");
-            return;
-        }
-        if (TextUtils.isEmpty(hospital)) {
-            etHospital.setError("Hospital name is required");
-            return;
-        }
-        if (TextUtils.isEmpty(units)) {
-            etUnits.setError("Units required");
-            return;
-        }
-        if (bloodType.equals("Select Blood Type")) {
-            Toast.makeText(this, "Please select blood type", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (TextUtils.isEmpty(patientName)) { etPatientName.setError("Required"); return; }
+        if (TextUtils.isEmpty(hospital)) { etHospital.setError("Required"); return; }
+        if (TextUtils.isEmpty(units)) { etUnits.setError("Required"); return; }
+        if (bloodType.equals("Select Blood Type")) { Toast.makeText(this, "Select blood type", Toast.LENGTH_SHORT).show(); return; }
+        
         if (latitude == 0.0 || longitude == 0.0) {
-            Toast.makeText(this, "Please get current location before submitting", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please tap 'Get Current Location' and wait for coordinates.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -196,8 +276,6 @@ public class CreateRequestActivity extends AppCompatActivity {
         request.put("status", "pending");
         request.put("timestamp", System.currentTimeMillis());
         request.put("isEmergency", requestType.equals("Emergency"));
-        
-        // Location data
         request.put("latitude", latitude);
         request.put("longitude", longitude);
         request.put("address", currentAddress);
@@ -205,14 +283,11 @@ public class CreateRequestActivity extends AppCompatActivity {
         fStore.collection("blood_requests")
                 .add(request)
                 .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(CreateRequestActivity.this,
-                            "Request submitted successfully", Toast.LENGTH_SHORT).show();
-                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Request submitted successfully", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(CreateRequestActivity.this,
-                            "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     progressBar.setVisibility(View.GONE);
                 });
     }

@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F8F9FA"
-    tools:context=".ViewRequestsActivity">
+    tools:context=".ui.ViewRequestsActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -19,83 +19,66 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/primary"
+            app:title="Blood Requests"
             app:titleTextColor="@android:color/white"
             app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-        <!-- Filter buttons in horizontal scroll -->
-        <HorizontalScrollView
+        <LinearLayout
+            android:id="@+id/filterContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/white"
-            android:padding="12dp"
-            android:scrollbars="none">
+            android:padding="8dp"
+            android:orientation="vertical">
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/tvFilterStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:text="Showing requests for your blood group"
+                android:textSize="12sp"
+                android:textColor="@color/primary_dark"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="4dp"/>
 
-                <Button
-                    android:id="@+id/btnAll"
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none">
+
+                <LinearLayout
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="All"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/white"
-                    android:backgroundTint="@color/primary"
-                    android:layout_marginEnd="8dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"/>
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/btnPending"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="Pending"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/white"
-                    android:backgroundTint="@color/primary"
-                    android:layout_marginEnd="8dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"/>
+                    <Button
+                        android:id="@+id/btnViewAll"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="View All"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="8dp"/>
 
-                <Button
-                    android:id="@+id/btnApproved"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="Approved"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/white"
-                    android:backgroundTint="@color/primary"
-                    android:layout_marginEnd="8dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"/>
+                    <Button
+                        android:id="@+id/btnPending"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Pending"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="8dp"/>
 
-                <Button
-                    android:id="@+id/btnCompleted"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="Completed"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/white"
-                    android:backgroundTint="@color/primary"
-                    android:layout_marginEnd="8dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"/>
+                    <Button
+                        android:id="@+id/btnEmergency"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="Emergency"
+                        android:textSize="11sp"
+                        android:backgroundTint="@color/emergency"/>
 
-                <Button
-                    android:id="@+id/btnEmergency"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="Emergency"
-                    android:textSize="12sp"
-                    android:textColor="@android:color/white"
-                    android:backgroundTint="@color/emergency"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"/>
-
-            </LinearLayout>
-        </HorizontalScrollView>
+                </LinearLayout>
+            </HorizontalScrollView>
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -105,39 +88,54 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <FrameLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerView"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="12dp"
-                android:clipToPadding="false"
-                android:scrollbars="none"/>
-
-            <TextView
-                android:id="@+id/tvEmptyState"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="No blood requests yet.\nTap the + button to create one."
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textColor="#9E9E9E"
-                android:lineSpacingExtra="4dp"
-                android:visibility="gone"
-                android:padding="24dp"/>
+                android:orientation="vertical">
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"/>
 
-        </FrameLayout>
+                <Button
+                    android:id="@+id/btnLoadMore"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="View More"
+                    android:visibility="gone"
+                    android:layout_margin="16dp"/>
+
+                <TextView
+                    android:id="@+id/tvEmptyState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No requests for your blood group."
+                    android:textAlignment="center"
+                    android:textSize="16sp"
+                    android:textColor="#9E9E9E"
+                    android:padding="24dp"
+                    android:visibility="gone"/>
+
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:layout_margin="24dp"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
@@ -148,8 +146,6 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:src="@drawable/ic_add"
-        android:contentDescription="Create new request"
-        app:backgroundTint="@color/primary"
-        app:rippleColor="@color/primary_dark"/>
+        app:backgroundTint="@color/primary"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

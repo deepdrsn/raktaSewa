@@ -89,9 +89,11 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         }
 
         public void bind(BloodRequest request) {
-            tvPatientName.setText(request.getPatientName());
-            tvHospital.setText(request.getHospital());
-            tvBloodType.setText(request.getBloodType());
+            if (request == null) return;
+
+            tvPatientName.setText(request.getPatientName() != null ? request.getPatientName() : "Unknown Patient");
+            tvHospital.setText(request.getHospital() != null ? request.getHospital() : "Unknown Hospital");
+            tvBloodType.setText(request.getBloodType() != null ? request.getBloodType() : "--");
             tvUnits.setText(request.getUnits() + " units needed");
 
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault());
@@ -104,7 +106,11 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 tvAdditionalInfo.setVisibility(View.GONE);
             }
 
-            switch (request.getStatus().toLowerCase()) {
+            // SAFE NULL CHECK for Status
+            String status = request.getStatus();
+            if (status == null) status = "pending";
+            
+            switch (status.toLowerCase()) {
                 case "pending":
                     chipStatus.setText("PENDING");
                     chipStatus.setChipBackgroundColorResource(R.color.status_pending);
@@ -118,20 +124,22 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                     chipStatus.setChipBackgroundColorResource(R.color.status_completed);
                     break;
                 default:
-                    chipStatus.setText(request.getStatus().toUpperCase());
+                    chipStatus.setText(status.toUpperCase());
                     chipStatus.setChipBackgroundColorResource(R.color.status_default);
             }
 
             chipEmergency.setVisibility(request.isEmergency() ? View.VISIBLE : View.GONE);
 
             btnContact.setOnClickListener(v -> {
-                Intent intent = new Intent(Intent.ACTION_DIAL);
-                intent.setData(Uri.parse("tel:" + request.getContact()));
-                context.startActivity(intent);
+                if (request.getContact() != null) {
+                    Intent intent = new Intent(Intent.ACTION_DIAL);
+                    intent.setData(Uri.parse("tel:" + request.getContact()));
+                    context.startActivity(intent);
+                }
             });
 
             btnViewDetails.setOnClickListener(v -> {
-                Toast.makeText(context, "Viewing details for " + request.getPatientName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Details: " + request.getAddress(), Toast.LENGTH_LONG).show();
             });
 
             btnShare.setOnClickListener(v -> {
@@ -146,7 +154,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 context.startActivity(Intent.createChooser(shareIntent, "Share via"));
             });
 
-            // Handle delete button visibility and action
             if (isManageMode && request.getUserId() != null && request.getUserId().equals(currentUserId)) {
                 btnDelete.setVisibility(View.VISIBLE);
                 btnDelete.setOnClickListener(v -> showDeleteConfirmation(request, getAdapterPosition()));
@@ -165,6 +172,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         }
 
         private void deleteRequest(BloodRequest request, int position) {
+            if (request.getRequestId() == null) return;
             fStore.collection("blood_requests").document(request.getRequestId())
                     .delete()
                     .addOnSuccessListener(aVoid -> {

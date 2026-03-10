@@ -2,6 +2,7 @@ package com.example.raktasewa.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -17,6 +18,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.raktasewa.R;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -26,20 +28,26 @@ import java.util.List;
 
 public class ViewRequestsActivity extends AppCompatActivity {
 
+    private static final String TAG = "ViewRequestsActivity";
+    private static final int PAGE_LIMIT = 15;
+
     private RecyclerView recyclerView;
     private RequestAdapter requestAdapter;
     private List<BloodRequest> requestList;
     private ProgressBar progressBar;
-    private TextView tvEmptyState;
+    private TextView tvEmptyState, tvFilterStatus;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private Button btnAll, btnPending, btnApproved, btnCompleted, btnEmergency;
+    private Button btnViewAllCenter, btnLoadMore;
     private FloatingActionButton fabCreateRequest;
     private Toolbar toolbar;
 
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
     private String currentUserId;
-    private String currentFilter = "all";
+    private String userBloodType = null;
+    
+    private DocumentSnapshot lastVisible = null;
+    private boolean isViewAllMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +58,6 @@ public class ViewRequestsActivity extends AppCompatActivity {
         fStore = FirebaseFirestore.getInstance();
 
         if (fAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -60,13 +67,13 @@ public class ViewRequestsActivity extends AppCompatActivity {
         initializeUI();
         setupToolbar();
         setupRecyclerView();
-        setupFilterButtons();
+        setupClickListeners();
 
-        loadRequests();
+        // Start by getting user's blood type, then load requests
+        fetchUserBloodType();
 
-        swipeRefreshLayout.setOnRefreshListener(this::loadRequests);
-        fabCreateRequest.setOnClickListener(v -> {
-            startActivity(new Intent(this, CreateRequestActivity.class));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            refreshData();
         });
     }
 
@@ -75,13 +82,14 @@ public class ViewRequestsActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         progressBar = findViewById(R.id.progressBar);
         tvEmptyState = findViewById(R.id.tvEmptyState);
+        tvFilterStatus = findViewById(R.id.tvFilterStatus);
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-        btnAll = findViewById(R.id.btnAll);
-        btnPending = findViewById(R.id.btnPending);
-        btnApproved = findViewById(R.id.btnApproved);
-        btnCompleted = findViewById(R.id.btnCompleted);
-        btnEmergency = findViewById(R.id.btnEmergency);
+        btnViewAllCenter = findViewById(R.id.btnViewAll); // Reusing ID from layout
+        btnLoadMore = findViewById(R.id.btnLoadMore);
         fabCreateRequest = findViewById(R.id.fabCreateRequest);
+        
+        btnViewAllCenter.setVisibility(View.GONE);
+        btnLoadMore.setVisibility(View.GONE);
     }
 
     private void setupToolbar() {
@@ -97,61 +105,105 @@ public class ViewRequestsActivity extends AppCompatActivity {
         requestAdapter = new RequestAdapter(this, requestList, currentUserId);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(requestAdapter);
+        recyclerView.setNestedScrollingEnabled(false);
     }
 
-    private void setupFilterButtons() {
-        btnAll.setOnClickListener(v -> { currentFilter = "all"; loadRequests(); updateButtonStates(btnAll); });
-        btnPending.setOnClickListener(v -> { currentFilter = "pending"; loadRequests(); updateButtonStates(btnPending); });
-        btnApproved.setOnClickListener(v -> { currentFilter = "approved"; loadRequests(); updateButtonStates(btnApproved); });
-        btnCompleted.setOnClickListener(v -> { currentFilter = "completed"; loadRequests(); updateButtonStates(btnCompleted); });
-        btnEmergency.setOnClickListener(v -> { currentFilter = "emergency"; loadRequests(); updateButtonStates(btnEmergency); });
-        updateButtonStates(btnAll);
+    private void setupClickListeners() {
+        btnViewAllCenter.setOnClickListener(v -> {
+            isViewAllMode = true;
+            tvFilterStatus.setText("Showing all requests");
+            btnViewAllCenter.setVisibility(View.GONE);
+            refreshData();
+        });
+
+        btnLoadMore.setOnClickListener(v -> loadRequests(true));
+
+        fabCreateRequest.setOnClickListener(v -> startActivity(new Intent(this, CreateRequestActivity.class)));
     }
 
-    private void updateButtonStates(Button selectedButton) {
-        int primaryColor = getResources().getColor(R.color.primary);
-        int darkColor = getResources().getColor(R.color.primary_dark);
-        
-        btnAll.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primaryColor));
-        btnPending.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primaryColor));
-        btnApproved.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primaryColor));
-        btnCompleted.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primaryColor));
-        btnEmergency.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(R.color.emergency)));
-
-        selectedButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(darkColor));
-    }
-
-    private void loadRequests() {
+    private void fetchUserBloodType() {
         progressBar.setVisibility(View.VISIBLE);
-        tvEmptyState.setVisibility(View.GONE);
-        requestList.clear();
+        fStore.collection("users").document(currentUserId).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        userBloodType = doc.getString("bloodType");
+                        if (userBloodType != null && !userBloodType.isEmpty()) {
+                            tvFilterStatus.setText("Matching your blood group: " + userBloodType);
+                            loadRequests(false);
+                        } else {
+                            enableViewAll("No blood group in your profile.");
+                        }
+                    } else {
+                        enableViewAll("Profile not found.");
+                    }
+                })
+                .addOnFailureListener(e -> enableViewAll("Error fetching profile."));
+    }
 
-        // CHANGED: Don't filter by userId here, show ALL requests for donors
+    private void enableViewAll(String reason) {
+        isViewAllMode = true;
+        tvFilterStatus.setText("Showing all requests");
+        loadRequests(false);
+    }
+
+    private void refreshData() {
+        lastVisible = null;
+        loadRequests(false);
+    }
+
+    private void loadRequests(boolean isLoadMore) {
+        if (!isLoadMore) {
+            progressBar.setVisibility(View.VISIBLE);
+            requestList.clear();
+            requestAdapter.notifyDataSetChanged();
+            lastVisible = null;
+            tvEmptyState.setVisibility(View.GONE);
+        }
+
         Query query = fStore.collection("blood_requests")
                 .orderBy("timestamp", Query.Direction.DESCENDING);
 
-        if (!currentFilter.equals("all")) {
-            if (currentFilter.equals("emergency")) {
-                query = query.whereEqualTo("isEmergency", true);
-            } else {
-                query = query.whereEqualTo("status", currentFilter);
-            }
+        // Apply blood type filter only if NOT in "View All" mode
+        if (!isViewAllMode && userBloodType != null) {
+            query = query.whereEqualTo("bloodType", userBloodType);
+        }
+
+        query = query.limit(PAGE_LIMIT);
+        if (isLoadMore && lastVisible != null) {
+            query = query.startAfter(lastVisible);
         }
 
         query.get().addOnCompleteListener(task -> {
             progressBar.setVisibility(View.GONE);
             swipeRefreshLayout.setRefreshing(false);
 
-            if (task.isSuccessful()) {
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    BloodRequest request = document.toObject(BloodRequest.class);
-                    request.setRequestId(document.getId());
-                    requestList.add(request);
+            if (task.isSuccessful() && task.getResult() != null) {
+                List<DocumentSnapshot> documents = task.getResult().getDocuments();
+                
+                if (!documents.isEmpty()) {
+                    lastVisible = documents.get(documents.size() - 1);
+                    for (DocumentSnapshot doc : documents) {
+                        BloodRequest req = doc.toObject(BloodRequest.class);
+                        if (req != null) {
+                            req.setRequestId(doc.getId());
+                            requestList.add(req);
+                        }
+                    }
+                    requestAdapter.notifyDataSetChanged();
+                    btnLoadMore.setVisibility(documents.size() == PAGE_LIMIT ? View.VISIBLE : View.GONE);
+                } else if (!isLoadMore) {
+                    // No results at all
+                    tvEmptyState.setVisibility(View.VISIBLE);
+                    if (!isViewAllMode) {
+                        tvEmptyState.setText("No requests for your blood group (" + userBloodType + ").");
+                        btnViewAllCenter.setVisibility(View.VISIBLE);
+                    } else {
+                        tvEmptyState.setText("No blood requests found in the system.");
+                    }
                 }
-                requestAdapter.notifyDataSetChanged();
-                if (requestList.isEmpty()) tvEmptyState.setVisibility(View.VISIBLE);
             } else {
-                Toast.makeText(this, "Error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Failed to load: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Query error", task.getException());
             }
         });
     }

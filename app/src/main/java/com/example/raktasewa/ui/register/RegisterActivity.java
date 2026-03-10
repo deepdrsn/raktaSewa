@@ -1,6 +1,8 @@
 package com.example.raktasewa.ui.register;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -28,14 +30,12 @@ public class RegisterActivity extends AppCompatActivity {
 
     public static final String TAG = "RegisterDonorActivity";
 
-    // UI components
     EditText etName, etEmail, etPassword, etPhone, etAddress, etLastDonated;
     Spinner spinnerBloodType, spinnerGender;
     Button btnRegister;
     TextView tvLogin;
     ProgressBar progressBar;
 
-    // Firebase services
     FirebaseAuth fAuth;
     FirebaseFirestore fStore;
 
@@ -44,7 +44,6 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // 1. Initialize UI components
         etName = findViewById(R.id.etName);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
@@ -57,7 +56,6 @@ public class RegisterActivity extends AppCompatActivity {
         tvLogin = findViewById(R.id.tvLogin);
         progressBar = findViewById(R.id.progressBar);
 
-        // Setup Spinners (You need to add these string-arrays to res/values/strings.xml)
         ArrayAdapter<CharSequence> bloodAdapter = ArrayAdapter.createFromResource(this,
                 R.array.blood_types, android.R.layout.simple_spinner_item);
         bloodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -68,14 +66,11 @@ public class RegisterActivity extends AppCompatActivity {
         genderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerGender.setAdapter(genderAdapter);
 
-        // 2. Initialize Firebase instances
         fAuth = FirebaseAuth.getInstance();
         fStore = FirebaseFirestore.getInstance();
 
-        // 3. Set click listener for the Register button
         btnRegister.setOnClickListener(v -> registerUser());
 
-        // 4. Set listener for the login TextView
         tvLogin.setOnClickListener(v -> {
             startActivity(new Intent(getApplicationContext(), LoginActivity.class));
             finish();
@@ -83,7 +78,6 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void registerUser() {
-        // Get text from all fields
         String nameStr = etName.getText().toString().trim();
         String emailStr = etEmail.getText().toString().trim();
         String passwordStr = etPassword.getText().toString().trim();
@@ -93,39 +87,23 @@ public class RegisterActivity extends AppCompatActivity {
         String bloodTypeStr = spinnerBloodType.getSelectedItem().toString();
         String genderStr = spinnerGender.getSelectedItem().toString();
 
-        // --- Validation ---
-        if (TextUtils.isEmpty(nameStr)) {
-            etName.setError("Full Name is Required.");
-            return;
-        }
-        if (TextUtils.isEmpty(emailStr)) {
-            etEmail.setError("Email is Required.");
-            return;
-        }
-        if (TextUtils.isEmpty(passwordStr) || passwordStr.length() < 6) {
-            etPassword.setError("Password must be >= 6 characters.");
-            return;
-        }
-        if (TextUtils.isEmpty(phoneStr)) {
-            etPhone.setError("Phone Number is Required.");
-            return;
-        }
-        // Add more validation as needed...
+        if (TextUtils.isEmpty(nameStr)) { etName.setError("Required"); return; }
+        if (TextUtils.isEmpty(emailStr)) { etEmail.setError("Required"); return; }
+        if (TextUtils.isEmpty(passwordStr) || passwordStr.length() < 6) { etPassword.setError(">= 6 chars"); return; }
+        if (TextUtils.isEmpty(phoneStr)) { etPhone.setError("Required"); return; }
 
         progressBar.setVisibility(View.VISIBLE);
 
-        // --- Firebase Operations ---
         fAuth.createUserWithEmailAndPassword(emailStr, passwordStr)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        Toast.makeText(RegisterActivity.this, "User Created.", Toast.LENGTH_SHORT).show();
-
+                        saveLoginTimestamp(); // Save session start time
+                        
                         String userID = fAuth.getCurrentUser().getUid();
                         DocumentReference documentReference = fStore.collection("users").document(userID);
 
-                        // Create a detailed user data map
                         Map<String, Object> user = new HashMap<>();
-                        user.put("role", "donor"); // Hardcode the role
+                        user.put("role", "donor");
                         user.put("fullName", nameStr);
                         user.put("email", emailStr);
                         user.put("phone", phoneStr);
@@ -134,20 +112,20 @@ public class RegisterActivity extends AppCompatActivity {
                         user.put("gender", genderStr);
                         user.put("lastDonatedDate", lastDonatedStr);
 
-                        // Save the user data to Firestore
-                        documentReference.set(user)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "onSuccess: Donor Profile created for " + userID))
-                                .addOnFailureListener(e -> Log.w(TAG, "onFailure: Error creating profile", e));
-
-                        // Redirect to LoginActivity
-                        startActivity(new Intent(getApplicationContext(), LoginActivity.class));
-                        finishAffinity(); // Close all registration-related activities
-
+                        documentReference.set(user).addOnSuccessListener(aVoid -> {
+                            Toast.makeText(RegisterActivity.this, "User Created.", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(getApplicationContext(), LoginActivity.class));
+                            finishAffinity();
+                        });
                     } else {
-                        // If registration fails, show an error and hide the progress bar
                         Toast.makeText(RegisterActivity.this, "Error! " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                         progressBar.setVisibility(View.GONE);
                     }
                 });
+    }
+
+    private void saveLoginTimestamp() {
+        SharedPreferences sharedPref = getSharedPreferences("RaktaSewaPrefs", Context.MODE_PRIVATE);
+        sharedPref.edit().putLong("lastLoginTime", System.currentTimeMillis()).apply();
     }
 }
