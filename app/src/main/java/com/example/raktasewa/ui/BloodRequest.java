@@ -1,5 +1,7 @@
 package com.example.raktasewa.ui;
 
+import com.google.firebase.firestore.PropertyName;
+
 public class BloodRequest {
     private String requestId;
     private String userId;
@@ -56,7 +58,10 @@ public class BloodRequest {
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
+    @PropertyName("isEmergency")
     public boolean isEmergency() { return isEmergency; }
+
+    @PropertyName("isEmergency")
     public void setEmergency(boolean emergency) { isEmergency = emergency; }
 
     public double getLatitude() { return latitude; }
