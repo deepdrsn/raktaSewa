@@ -129,6 +129,18 @@
 
         </LinearLayout>
 
+        <!-- Donor Info (Visible when accepted) -->
+        <TextView
+            android:id="@+id/tvDonorInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Donor: Loading..."
+            android:textSize="14sp"
+            android:textColor="#2E7D32"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
         <!-- Additional Info (if any) -->
         <TextView
             android:id="@+id/tvAdditionalInfo"
@@ -151,6 +163,18 @@
             android:gravity="center_vertical">
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAction"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Accept Request"
+                android:textSize="12sp"
+                app:cornerRadius="18dp"
+                android:layout_marginEnd="4dp"
+                android:visibility="gone"/>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnContact"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
@@ -165,7 +189,8 @@
                 app:strokeColor="@color/primary"
                 app:strokeWidth="1dp"
                 android:textColor="@color/primary"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="4dp"
+                android:visibility="gone"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnViewDetails"

@@ -16,6 +16,8 @@ public class BloodRequest {
     private double latitude;
     private double longitude;
     private String address;
+    private String donorId;
+    private long fulfilledTimestamp;
 
     // Empty constructor needed for Firestore
     public BloodRequest() {}
@@ -65,4 +67,10 @@ public class BloodRequest {
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public String getDonorId() { return donorId; }
+    public void setDonorId(String donorId) { this.donorId = donorId; }
+
+    public long getFulfilledTimestamp() { return fulfilledTimestamp; }
+    public void setFulfilledTimestamp(long fulfilledTimestamp) { this.fulfilledTimestamp = fulfilledTimestamp; }
 }
