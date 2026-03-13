@@ -73,6 +73,12 @@
             android:exported="false"
             android:parentActivityName=".ui.ProfileActivity" />
 
+        <activity
+            android:name=".ui.AcceptedRequestsActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:parentActivityName=".ui.ProfileActivity" />
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

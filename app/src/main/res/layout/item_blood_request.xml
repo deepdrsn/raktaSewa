@@ -129,7 +129,17 @@
 
         </LinearLayout>
 
-        <!-- Donor Info (Visible when accepted) -->
+        <!-- Requester and Donor Info -->
+        <TextView
+            android:id="@+id/tvRequesterInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Requested by: Loading..."
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"/>
+
         <TextView
             android:id="@+id/tvDonorInfo"
             android:layout_width="match_parent"

@@ -70,7 +70,12 @@ public class CreateRequestActivity extends AppCompatActivity {
 
         fAuth = FirebaseAuth.getInstance();
         fStore = FirebaseFirestore.getInstance();
-        userId = fAuth.getCurrentUser().getUid();
+        if (fAuth.getCurrentUser() != null) {
+            userId = fAuth.getCurrentUser().getUid();
+        } else {
+            finish();
+            return;
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         initializeUI();
@@ -246,7 +251,7 @@ public class CreateRequestActivity extends AppCompatActivity {
     private void submitRequest() {
         String patientName = etPatientName.getText().toString().trim();
         String hospital = etHospital.getText().toString().trim();
-        String units = etUnits.getText().toString().trim();
+        String unitsStr = etUnits.getText().toString().trim();
         String contact = etContact.getText().toString().trim();
         String additionalInfo = etAdditionalInfo.getText().toString().trim();
         String bloodType = spinnerBloodType.getSelectedItem().toString();
@@ -254,7 +259,7 @@ public class CreateRequestActivity extends AppCompatActivity {
 
         if (TextUtils.isEmpty(patientName)) { etPatientName.setError("Required"); return; }
         if (TextUtils.isEmpty(hospital)) { etHospital.setError("Required"); return; }
-        if (TextUtils.isEmpty(units)) { etUnits.setError("Required"); return; }
+        if (TextUtils.isEmpty(unitsStr)) { etUnits.setError("Required"); return; }
         if (bloodType.equals("Select Blood Type")) { Toast.makeText(this, "Select blood type", Toast.LENGTH_SHORT).show(); return; }
         
         if (latitude == 0.0 || longitude == 0.0) {
@@ -268,14 +273,17 @@ public class CreateRequestActivity extends AppCompatActivity {
         request.put("userId", userId);
         request.put("patientName", patientName);
         request.put("hospital", hospital);
-        request.put("units", Integer.parseInt(units));
+        request.put("units", Integer.parseInt(unitsStr));
         request.put("contact", contact);
         request.put("additionalInfo", additionalInfo);
         request.put("bloodType", bloodType);
         request.put("requestType", requestType);
         request.put("status", "pending");
         request.put("timestamp", System.currentTimeMillis());
-        request.put("isEmergency", requestType.equals("Emergency"));
+        
+        // Ensure "Emergency" is correctly matched from the spinner values
+        request.put("isEmergency", "Emergency".equalsIgnoreCase(requestType));
+        
         request.put("latitude", latitude);
         request.put("longitude", longitude);
         request.put("address", currentAddress);

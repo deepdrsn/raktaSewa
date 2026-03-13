@@ -80,7 +80,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
 
     class RequestViewHolder extends RecyclerView.ViewHolder {
         private CardView cardView;
-        private TextView tvPatientName, tvHospital, tvBloodType, tvUnits, tvDate, tvAdditionalInfo, tvDonorInfo;
+        private TextView tvPatientName, tvHospital, tvBloodType, tvUnits, tvDate, tvAdditionalInfo, tvDonorInfo, tvRequesterInfo;
         private Chip chipStatus, chipEmergency;
         private MaterialButton btnContact, btnViewDetails, btnAction;
         private ImageButton btnShare, btnDelete;
@@ -95,6 +95,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             tvDate = itemView.findViewById(R.id.tvDate);
             tvAdditionalInfo = itemView.findViewById(R.id.tvAdditionalInfo);
             tvDonorInfo = itemView.findViewById(R.id.tvDonorInfo);
+            tvRequesterInfo = itemView.findViewById(R.id.tvRequesterInfo);
             chipStatus = itemView.findViewById(R.id.chipStatus);
             chipEmergency = itemView.findViewById(R.id.chipEmergency);
             btnContact = itemView.findViewById(R.id.btnContact);
@@ -148,6 +149,12 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             boolean isAccepted = "accepted".equalsIgnoreCase(status);
             boolean isFulfilled = "fulfilled".equalsIgnoreCase(status);
 
+            // Requester name visibility
+            if (tvRequesterInfo != null) {
+                tvRequesterInfo.setVisibility(View.VISIBLE);
+                fetchUserName(request.getUserId(), tvRequesterInfo, "Requested by: ");
+            }
+
             // Contact Info visibility: Show if seeker or accepted donor
             if (isRequester || isDonor) {
                 btnContact.setVisibility(View.VISIBLE);
@@ -178,7 +185,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             if (isAccepted || isFulfilled) {
                 tvDonorInfo.setVisibility(View.VISIBLE);
                 if (request.getDonorId() != null) {
-                    fetchDonorName(request.getDonorId(), tvDonorInfo);
+                    fetchUserName(request.getDonorId(), tvDonorInfo, "Accepted by: ");
                 }
             } else {
                 tvDonorInfo.setVisibility(View.GONE);
@@ -228,7 +235,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         private void showAcceptConfirmationDialog(BloodRequest request) {
             // Check blood group matching
             if (userBloodType == null) {
-                Toast.makeText(context, "Please register as donor or set your profile with blood type first.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Please complete your profile with blood type first.", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -292,11 +299,13 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                     .addOnFailureListener(e -> Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
 
-        private void fetchDonorName(String donorId, TextView tv) {
-            fStore.collection("users").document(donorId).get()
+        private void fetchUserName(String userId, TextView tv, String prefix) {
+            fStore.collection("users").document(userId).get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
-                            tv.setText("Accepted by: " + documentSnapshot.getString("fullName"));
+                            tv.setText(prefix + documentSnapshot.getString("fullName"));
+                        } else {
+                            tv.setText(prefix + "Unknown User");
                         }
                     });
         }
