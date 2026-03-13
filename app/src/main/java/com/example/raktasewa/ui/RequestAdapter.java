@@ -18,8 +18,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.raktasewa.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -33,6 +35,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
     private FirebaseFirestore fStore;
     private Context context;
     private boolean isManageMode;
+    private String userBloodType;
 
     public RequestAdapter(Context context, List<BloodRequest> requestList, String userId) {
         this(context, requestList, userId, false);
@@ -44,6 +47,16 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         this.currentUserId = userId;
         this.fStore = FirebaseFirestore.getInstance();
         this.isManageMode = isManageMode;
+        fetchCurrentUserBloodType();
+    }
+
+    private void fetchCurrentUserBloodType() {
+        fStore.collection("users").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        userBloodType = documentSnapshot.getString("bloodType");
+                    }
+                });
     }
 
     @NonNull
@@ -151,16 +164,14 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
 
             // Action Button Logic
             btnAction.setVisibility(View.GONE);
-            if (!isRequester) {
-                if (isPending) {
-                    btnAction.setVisibility(View.VISIBLE);
-                    btnAction.setText("Accept Request");
-                    btnAction.setOnClickListener(v -> acceptRequest(request));
-                } else if (isAccepted && isDonor) {
-                    btnAction.setVisibility(View.VISIBLE);
-                    btnAction.setText("Mark as Fulfilled");
-                    btnAction.setOnClickListener(v -> fulfillRequest(request));
-                }
+            if (isPending && !isRequester) {
+                btnAction.setVisibility(View.VISIBLE);
+                btnAction.setText("Accept Request");
+                btnAction.setOnClickListener(v -> showAcceptConfirmationDialog(request));
+            } else if (isAccepted && isRequester) {
+                btnAction.setVisibility(View.VISIBLE);
+                btnAction.setText("Mark as Fulfilled");
+                btnAction.setOnClickListener(v -> fulfillRequest(request));
             }
 
             // Donor info visibility for seeker
@@ -212,6 +223,48 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 default:
                     chipStatus.setChipBackgroundColorResource(android.R.color.darker_gray);
             }
+        }
+
+        private void showAcceptConfirmationDialog(BloodRequest request) {
+            // Check blood group matching
+            if (userBloodType == null) {
+                Toast.makeText(context, "Please register as donor or set your profile with blood type first.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (!userBloodType.equalsIgnoreCase(request.getBloodType())) {
+                Toast.makeText(context, "You can only accept requests matching your blood group (" + userBloodType + ").", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // Check if donor already has an accepted request that is not yet fulfilled
+            fStore.collection("blood_requests")
+                    .whereEqualTo("donorId", currentUserId)
+                    .whereEqualTo("status", "accepted")
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                            Toast.makeText(context, "You already have an active accepted request. Please fulfill it first.", Toast.LENGTH_LONG).show();
+                        } else {
+                            displayConfirmationDialog(request);
+                        }
+                    });
+        }
+
+        private void displayConfirmationDialog(BloodRequest request) {
+            String caseType = request.isEmergency() ? "EMERGENCY" : "Normal";
+            String info = "Patient: " + request.getPatientName() + "\n" +
+                          "Location: " + request.getHospital() + "\n" +
+                          "Address: " + request.getAddress() + "\n" +
+                          "Case: " + caseType + "\n" +
+                          "Blood Group: " + request.getBloodType();
+
+            new AlertDialog.Builder(context)
+                    .setTitle("Accept Blood Request?")
+                    .setMessage(info)
+                    .setPositiveButton("Accept", (dialog, which) -> acceptRequest(request))
+                    .setNegativeButton("Cancel", null)
+                    .show();
         }
 
         private void acceptRequest(BloodRequest request) {

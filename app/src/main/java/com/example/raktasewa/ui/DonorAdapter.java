@@ -50,13 +50,21 @@ public class DonorAdapter extends BaseAdapter {
         TextView tvBloodType = convertView.findViewById(R.id.tvDonorBloodType);
         TextView tvPhone = convertView.findViewById(R.id.tvDonorPhone);
         TextView tvAddress = convertView.findViewById(R.id.tvDonorAddress);
+        TextView tvCity = convertView.findViewById(R.id.tvDonorCity);
         TextView tvLastDonated = convertView.findViewById(R.id.tvLastDonated);
-        TextView tvAvailability = convertView.findViewById(R.id.tvAvailability); // Assuming this ID exists or should be added
+        TextView tvAvailability = convertView.findViewById(R.id.tvAvailability);
         Button btnContact = convertView.findViewById(R.id.btnContactDonor);
 
         tvName.setText(donor.getName());
         tvBloodType.setText("Blood Type: " + donor.getBloodType());
         tvAddress.setText("Address: " + donor.getAddress());
+        
+        if (donor.getCity() != null && !donor.getCity().isEmpty()) {
+            tvCity.setVisibility(View.VISIBLE);
+            tvCity.setText("City: " + donor.getCity());
+        } else {
+            tvCity.setVisibility(View.GONE);
+        }
 
         String lastDonated = donor.getLastDonatedDate();
         if (lastDonated != null && !lastDonated.isEmpty()) {
@@ -65,9 +73,6 @@ public class DonorAdapter extends BaseAdapter {
             tvLastDonated.setText("Last Donated: Not available");
         }
 
-        // Rules:
-        // - If availableToDonate = false, show "Not Available" in the UI.
-        // - Hide contact information if donor is not available.
         if (donor.isAvailableToDonate()) {
             if (tvAvailability != null) {
                 tvAvailability.setText("Available");

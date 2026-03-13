@@ -7,6 +7,9 @@ public class Donor {
     private String address;
     private String lastDonatedDate;
     private boolean availableToDonate;
+    private double latitude;
+    private double longitude;
+    private String city;
 
     public Donor(String name, String bloodType, String phone, String address, String lastDonatedDate, boolean availableToDonate) {
         this.name = name;
@@ -17,6 +20,18 @@ public class Donor {
         this.availableToDonate = availableToDonate;
     }
 
+    public Donor(String name, String bloodType, String phone, String address, String lastDonatedDate, boolean availableToDonate, double latitude, double longitude, String city) {
+        this.name = name;
+        this.bloodType = bloodType;
+        this.phone = phone;
+        this.address = address;
+        this.lastDonatedDate = lastDonatedDate;
+        this.availableToDonate = availableToDonate;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.city = city;
+    }
+
     // Getters
     public String getName() { return name; }
     public String getBloodType() { return bloodType; }
@@ -24,4 +39,7 @@ public class Donor {
     public String getAddress() { return address; }
     public String getLastDonatedDate() { return lastDonatedDate; }
     public boolean isAvailableToDonate() { return availableToDonate; }
+    public double getLatitude() { return latitude; }
+    public double getLongitude() { return longitude; }
+    public String getCity() { return city; }
 }

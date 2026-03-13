@@ -43,6 +43,14 @@
         android:textSize="16sp"/>
 
     <TextView
+        android:id="@+id/tvDonorCity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="italic"
+        android:textColor="#757575"/>
+
+    <TextView
         android:id="@+id/tvLastDonated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

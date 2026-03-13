@@ -24,12 +24,14 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class ViewRequestsActivity extends AppCompatActivity {
 
     private static final String TAG = "ViewRequestsActivity";
-    private static final int PAGE_LIMIT = 15;
+    private static final int PAGE_LIMIT = 50; // Increased to allow better sorting client-side if needed
 
     private RecyclerView recyclerView;
     private RequestAdapter requestAdapter;
@@ -105,7 +107,6 @@ public class ViewRequestsActivity extends AppCompatActivity {
         requestAdapter = new RequestAdapter(this, requestList, currentUserId);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(requestAdapter);
-        recyclerView.setNestedScrollingEnabled(false);
     }
 
     private void setupClickListeners() {
@@ -160,7 +161,11 @@ public class ViewRequestsActivity extends AppCompatActivity {
             tvEmptyState.setVisibility(View.GONE);
         }
 
+        // Ordering by isEmergency (true/false) and then by timestam
+        // If index doesn't exist, it might fail. 
+        // We'll use multiple orderBys to ensure emergency is on top.
         Query query = fStore.collection("blood_requests")
+                .orderBy("isEmergency", Query.Direction.DESCENDING)
                 .orderBy("timestamp", Query.Direction.DESCENDING);
 
         // Apply blood type filter only if NOT in "View All" mode
@@ -189,6 +194,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
                             requestList.add(req);
                         }
                     }
+                    
                     requestAdapter.notifyDataSetChanged();
                     btnLoadMore.setVisibility(documents.size() == PAGE_LIMIT ? View.VISIBLE : View.GONE);
                 } else if (!isLoadMore) {
@@ -204,6 +210,50 @@ public class ViewRequestsActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Failed to load: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                 Log.e(TAG, "Query error", task.getException());
+                
+                // Fallback: If composite index is missing, try loading without sorting by emergency first
+                if (task.getException() != null && task.getException().getMessage().contains("FAILED_PRECONDITION")) {
+                   loadRequestsWithoutSorting(isLoadMore);
+                }
+            }
+        });
+    }
+
+    private void loadRequestsWithoutSorting(boolean isLoadMore) {
+        // This is a fallback if the composite index hasn't been created yet.
+        Query query = fStore.collection("blood_requests")
+                .orderBy("timestamp", Query.Direction.DESCENDING);
+
+        if (!isViewAllMode && userBloodType != null) {
+            query = query.whereEqualTo("bloodType", userBloodType);
+        }
+
+        query = query.limit(PAGE_LIMIT);
+        if (isLoadMore && lastVisible != null) {
+            query = query.startAfter(lastVisible);
+        }
+
+        query.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                List<DocumentSnapshot> documents = task.getResult().getDocuments();
+                if (!documents.isEmpty()) {
+                    lastVisible = documents.get(documents.size() - 1);
+                    for (DocumentSnapshot doc : documents) {
+                        BloodRequest req = doc.toObject(BloodRequest.class);
+                        if (req != null) {
+                            req.setRequestId(doc.getId());
+                            requestList.add(req);
+                        }
+                    }
+                    // Client side sort as fallback
+                    Collections.sort(requestList, (o1, o2) -> {
+                        if (o1.isEmergency() != o2.isEmergency()) {
+                            return o1.isEmergency() ? -1 : 1;
+                        }
+                        return Long.compare(o2.getTimestamp(), o1.getTimestamp());
+                    });
+                    requestAdapter.notifyDataSetChanged();
+                }
             }
         });
     }

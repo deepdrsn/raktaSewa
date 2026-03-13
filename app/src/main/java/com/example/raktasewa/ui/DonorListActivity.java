@@ -81,13 +81,20 @@ public class DonorListActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             Boolean isAvailable = document.getBoolean("available");
+                            Double lat = document.getDouble("latitude");
+                            Double lon = document.getDouble("longitude");
+                            String city = document.getString("city");
+
                             Donor donor = new Donor(
                                     document.getString("fullName"),
                                     document.getString("bloodType"),
                                     document.getString("phone"),
                                     document.getString("address"),
                                     document.getString("lastDonatedDate"),
-                                    isAvailable != null ? isAvailable : false
+                                    isAvailable != null ? isAvailable : false,
+                                    lat != null ? lat : 0.0,
+                                    lon != null ? lon : 0.0,
+                                    city != null ? city : ""
                             );
                             donorList.add(donor);
                         }

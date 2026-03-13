@@ -51,6 +51,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_last_donation_date" />
 
+    <!-- Donor Specific Views -->
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switch_available_to_donate"
         android:layout_width="0dp"
@@ -59,8 +60,34 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="32dp"
         android:text="Available to Donate"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
+
+    <Button
+        android:id="@+id/btn_view_accepted_requests"
+        style="@style/Widget.AppCompat.Button.Colored"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="View Accepted Requests"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+        app:layout_constraintTop_toBottomOf="@+id/switch_available_to_donate" />
+
+    <!-- Seeker Specific Views -->
+    <Button
+        android:id="@+id/btn_register_as_donor"
+        style="@style/Widget.AppCompat.Button.Colored"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Register as Donor"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
         app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
 
     <Button
@@ -70,9 +97,10 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Log Donation Date"
-        app:layout_constraintEnd_toEndOf="@+id/switch_available_to_donate"
-        app:layout_constraintStart_toStartOf="@+id/switch_available_to_donate"
-        app:layout_constraintTop_toBottomOf="@+id/switch_available_to_donate" />
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+        app:layout_constraintTop_toBottomOf="@+id/btn_view_accepted_requests" />
 
     <Button
         android:id="@+id/btn_view_donation_history"
@@ -81,8 +109,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="View Donation History"
-        app:layout_constraintEnd_toEndOf="@+id/btn_log_donation"
-        app:layout_constraintStart_toStartOf="@+id/btn_log_donation"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
         app:layout_constraintTop_toBottomOf="@+id/btn_log_donation" />
 
     <Button
@@ -92,8 +121,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Manage My Requests"
-        app:layout_constraintEnd_toEndOf="@+id/btn_view_donation_history"
-        app:layout_constraintStart_toStartOf="@+id/btn_view_donation_history"
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
         app:layout_constraintTop_toBottomOf="@+id/btn_view_donation_history" />
 
     <Button
@@ -104,7 +133,7 @@
         android:layout_marginBottom="32dp"
         android:text="Logout"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/btn_manage_my_requests"
-        app:layout_constraintStart_toStartOf="@+id/btn_manage_my_requests" />
+        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
