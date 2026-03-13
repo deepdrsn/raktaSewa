@@ -1,11 +1,5 @@
 package com.example.raktasewa.ui;
 
-/// ///
-import android.content.Intent;
-import android.os.Bundle;
-// ... other imports ...
-import com.example.raktasewa.R;
-/// ///
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -17,6 +11,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.raktasewa.R;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -75,6 +70,8 @@ public class DonorListActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         donorList.clear();
 
+        // Rules: Donors should always appear in the donor list.
+        // So we don't filter by availability here, but we show it in the UI.
         fStore.collection("users")
                 .whereEqualTo("role", "donor")
                 .whereEqualTo("bloodType", bloodType)
@@ -83,12 +80,14 @@ public class DonorListActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     if (task.isSuccessful()) {
                         for (QueryDocumentSnapshot document : task.getResult()) {
+                            Boolean isAvailable = document.getBoolean("available");
                             Donor donor = new Donor(
                                     document.getString("fullName"),
                                     document.getString("bloodType"),
                                     document.getString("phone"),
                                     document.getString("address"),
-                                    document.getString("lastDonatedDate")
+                                    document.getString("lastDonatedDate"),
+                                    isAvailable != null ? isAvailable : false
                             );
                             donorList.add(donor);
                         }

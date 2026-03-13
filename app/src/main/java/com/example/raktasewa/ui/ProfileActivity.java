@@ -2,6 +2,7 @@ package com.example.raktasewa.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,13 +16,22 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
 public class ProfileActivity extends AppCompatActivity {
 
+    private static final String TAG = "ProfileActivity";
     private TextView tvUserName, tvLastDonationDate;
     private Button btnEditProfile, btnLogDonation, btnViewHistory, btnManageRequests, btnLogout;
     private SwitchMaterial switchAvailable;
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
+    private String lastDonationDateStr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,10 +66,13 @@ public class ProfileActivity extends AppCompatActivity {
         docRef.get().addOnSuccessListener(documentSnapshot -> {
             if (documentSnapshot.exists()) {
                 tvUserName.setText(documentSnapshot.getString("fullName"));
-                String lastDonation = documentSnapshot.getString("lastDonationDate");
-                if (lastDonation != null) {
-                    tvLastDonationDate.setText("Last Donation: " + lastDonation);
+                lastDonationDateStr = documentSnapshot.getString("lastDonatedDate");
+                if (lastDonationDateStr != null && !lastDonationDateStr.isEmpty()) {
+                    tvLastDonationDate.setText("Last Donation: " + lastDonationDateStr);
+                } else {
+                    tvLastDonationDate.setText("Last Donation: Never");
                 }
+                
                 Boolean isAvailable = documentSnapshot.getBoolean("available");
                 if (isAvailable != null) {
                     switchAvailable.setChecked(isAvailable);
@@ -85,8 +98,60 @@ public class ProfileActivity extends AppCompatActivity {
             startActivity(new Intent(ProfileActivity.this, ManageRequestsActivity.class));
         });
 
-        // Other buttons can be implemented as needed
+        switchAvailable.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                checkEligibilityAndToggle(true);
+            } else {
+                updateAvailabilityInFirestore(false);
+            }
+        });
+
         btnLogDonation.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
         btnViewHistory.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
+    }
+
+    private void checkEligibilityAndToggle(boolean requestedState) {
+        if (lastDonationDateStr == null || lastDonationDateStr.isEmpty()) {
+            updateAvailabilityInFirestore(requestedState);
+            return;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        try {
+            Date lastDonationDate = sdf.parse(lastDonationDateStr);
+            if (lastDonationDate != null) {
+                long diffInMs = Math.abs(System.currentTimeMillis() - lastDonationDate.getTime());
+                long diffInDays = TimeUnit.DAYS.convert(diffInMs, TimeUnit.MILLISECONDS);
+
+                if (diffInDays < 90) {
+                    long remainingDays = 90 - diffInDays;
+                    Toast.makeText(this, "You can donate again in " + remainingDays + " days.", Toast.LENGTH_LONG).show();
+                    switchAvailable.setChecked(false);
+                } else {
+                    updateAvailabilityInFirestore(requestedState);
+                }
+            }
+        } catch (ParseException e) {
+            Log.e(TAG, "Error parsing date: " + lastDonationDateStr, e);
+            // If date format is wrong, we might want to allow it or ask to fix it.
+            // For now, let's assume it's correct or allow it.
+            updateAvailabilityInFirestore(requestedState);
+        }
+    }
+
+    private void updateAvailabilityInFirestore(boolean isAvailable) {
+        if (fAuth.getCurrentUser() == null) return;
+
+        String userId = fAuth.getCurrentUser().getUid();
+        fStore.collection("users").document(userId)
+                .update("available", isAvailable)
+                .addOnSuccessListener(aVoid -> {
+                    String status = isAvailable ? "available" : "unavailable";
+                    Toast.makeText(ProfileActivity.this, "You are now " + status, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(ProfileActivity.this, "Failed to update status", Toast.LENGTH_SHORT).show();
+                    switchAvailable.setChecked(!isAvailable);
+                });
     }
 }
