@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.raktasewa.R;
 import com.example.raktasewa.ui.login.LoginActivity;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -101,9 +102,14 @@ public class RegisterSeekerActivity extends AppCompatActivity {
         fAuth.createUserWithEmailAndPassword(emailStr, passwordStr)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        saveLoginTimestamp(); // Save session start time
-                        
-                        String userID = fAuth.getCurrentUser().getUid();
+                        FirebaseUser fUser = fAuth.getCurrentUser();
+                        fUser.sendEmailVerification().addOnSuccessListener(aVoid -> {
+                            Toast.makeText(RegisterSeekerActivity.this, "Verification Email Sent.", Toast.LENGTH_SHORT).show();
+                        }).addOnFailureListener(e -> {
+                            Log.d(TAG, "onFailure: Email not sent " + e.getMessage());
+                        });
+
+                        String userID = fUser.getUid();
                         DocumentReference documentReference = fStore.collection("users").document(userID);
 
                         Map<String, Object> user = new HashMap<>();
@@ -117,7 +123,7 @@ public class RegisterSeekerActivity extends AppCompatActivity {
 
                         documentReference.set(user)
                                 .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(RegisterSeekerActivity.this, "Registration Successful!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(RegisterSeekerActivity.this, "Registration Successful! Please verify your email.", Toast.LENGTH_LONG).show();
                                     startActivity(new Intent(getApplicationContext(), LoginActivity.class));
                                     finish();
                                 })
@@ -130,10 +136,5 @@ public class RegisterSeekerActivity extends AppCompatActivity {
                         progressBar.setVisibility(View.GONE);
                     }
                 });
-    }
-
-    private void saveLoginTimestamp() {
-        SharedPreferences sharedPref = getSharedPreferences("RaktaSewaPrefs", Context.MODE_PRIVATE);
-        sharedPref.edit().putLong("lastLoginTime", System.currentTimeMillis()).apply();
     }
 }
