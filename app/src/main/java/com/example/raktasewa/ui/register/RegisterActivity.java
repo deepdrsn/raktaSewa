@@ -1,6 +1,7 @@
 package com.example.raktasewa.ui.register;
 
 import android.Manifest;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -29,7 +30,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -71,6 +74,10 @@ public class RegisterActivity extends AppCompatActivity {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         setupSpinners();
+        
+        // Setup DatePicker for etLastDonated
+        etLastDonated.setFocusable(false);
+        etLastDonated.setOnClickListener(v -> showDatePickerDialog());
 
         btnGetLocation.setOnClickListener(v -> checkLocationPermission());
         btnRegister.setOnClickListener(v -> registerUser());
@@ -79,6 +86,24 @@ public class RegisterActivity extends AppCompatActivity {
             startActivity(new Intent(getApplicationContext(), LoginActivity.class));
             finish();
         });
+    }
+
+    private void showDatePickerDialog() {
+        final Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                (view, year1, monthOfYear, dayOfMonth) -> {
+                    // Format the date to YYYY-MM-DD
+                    String date = String.format(Locale.getDefault(), "%d-%02d-%02d", year1, monthOfYear + 1, dayOfMonth);
+                    etLastDonated.setText(date);
+                }, year, month, day);
+        
+        // Don't allow selecting future dates
+        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+        datePickerDialog.show();
     }
 
     private void setupSpinners() {

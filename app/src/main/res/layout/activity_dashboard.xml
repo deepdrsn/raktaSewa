@@ -307,7 +307,7 @@
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             android:src="@drawable/ic_blood_drop"
-                            app:tint="#2196F3" />
+                            app:tint="#D32F2F" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -343,7 +343,7 @@
                             android:layout_width="32dp"
                             android:layout_height="32dp"
                             android:src="@drawable/ic_profile"
-                            app:tint="#9C27B0" />
+                            app:tint="#D32F2F" />
 
                         <TextView
                             android:layout_width="wrap_content"
