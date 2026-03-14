@@ -1,5 +1,6 @@
 package com.example.raktasewa.ui;
 
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,8 +21,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class ProfileActivity extends AppCompatActivity {
@@ -171,8 +175,50 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
-        btnLogDonation.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
-        btnViewHistory.setOnClickListener(v -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show());
+        btnLogDonation.setOnClickListener(v -> showDatePickerDialog());
+        
+        btnViewHistory.setOnClickListener(v -> {
+            startActivity(new Intent(this, DonationHistoryActivity.class));
+        });
+    }
+
+    private void showDatePickerDialog() {
+        final Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                (view, year1, monthOfYear, dayOfMonth) -> {
+                    String date = String.format(Locale.getDefault(), "%d-%02d-%02d", year1, monthOfYear + 1, dayOfMonth);
+                    logDonation(date);
+                }, year, month, day);
+        
+        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+        datePickerDialog.show();
+    }
+
+    private void logDonation(String dateStr) {
+        if (fAuth.getCurrentUser() == null) return;
+        String userId = fAuth.getCurrentUser().getUid();
+
+        Map<String, Object> record = new HashMap<>();
+        record.put("date", dateStr);
+        record.put("timestamp", System.currentTimeMillis());
+
+        // 1. Add to donation history sub-collection
+        fStore.collection("users").document(userId).collection("donation_history")
+                .add(record)
+                .addOnSuccessListener(documentReference -> {
+                    // 2. Update the main user profile with the new lastDonatedDate
+                    fStore.collection("users").document(userId)
+                            .update("lastDonatedDate", dateStr)
+                            .addOnSuccessListener(aVoid -> {
+                                Toast.makeText(this, "Donation logged successfully", Toast.LENGTH_SHORT).show();
+                                loadUserProfile(); // Refresh UI
+                            });
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Error logging donation", Toast.LENGTH_SHORT).show());
     }
 
     private void checkEligibilityAndToggle(boolean requestedState) {
