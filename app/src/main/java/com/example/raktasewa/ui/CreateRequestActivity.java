@@ -293,10 +293,6 @@ public class CreateRequestActivity extends AppCompatActivity {
     }
 
     private void sendNotificationsToDonors(boolean isEmergency, String bloodType, double reqLat, double reqLon) {
-        // Logic to find eligible donors and send notifications.
-        // In a real app, this should be done via Cloud Functions for security and reliability.
-        // Here we simulate it by finding donor FCM tokens from Firestore.
-        
         fStore.collection("users")
                 .whereEqualTo("role", "donor")
                 .get()
@@ -310,16 +306,14 @@ public class CreateRequestActivity extends AppCompatActivity {
                         String donorBlood = doc.getString("bloodType");
 
                         if (isEmergency) {
-                            // Emergency: Within 10km, any blood type
                             if (donorLat != null && donorLon != null) {
                                 float[] results = new float[1];
                                 Location.distanceBetween(reqLat, reqLon, donorLat, donorLon, results);
-                                if (results[0] <= 10000) { // 10km
+                                if (results[0] <= 10000) {
                                     triggerNotification(token, "Emergency", "Emergency blood request near you.");
                                 }
                             }
                         } else {
-                            // Normal: Matching blood type
                             if (bloodType.equals(donorBlood)) {
                                 triggerNotification(token, "Blood Needed", bloodType + " blood requested near your area.");
                             }
@@ -329,8 +323,6 @@ public class CreateRequestActivity extends AppCompatActivity {
     }
 
     private void triggerNotification(String token, String title, String body) {
-        // This is a placeholder. To actually send an FCM message from the client,
-        // you would need a server key (not recommended) or use a backend service.
-        Log.d(TAG, "Notification should be sent to: " + token + " | " + title + ": " + body);
+        Log.d(TAG, "Notification logic should be here or handled by server.");
     }
 }

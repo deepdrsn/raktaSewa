@@ -1,139 +1,163 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.ProfileActivity">
+    android:background="#F8F9FA">
 
-    <ImageView
-        android:id="@+id/iv_profile_icon"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_marginTop="32dp"
-        android:src="@drawable/ic_profile"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="60dp">
 
-    <TextView
-        android:id="@+id/tv_user_name"
-        android:layout_width="wrap_content"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/iv_profile_icon"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_marginTop="32dp"
+                android:src="@drawable/ic_profile"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="#D32F2F" />
+
+            <TextView
+                android:id="@+id/tv_user_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="User Name"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/iv_profile_icon" />
+
+            <TextView
+                android:id="@+id/tv_last_donation_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Last Donation: YYYY-MM-DD"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tv_user_name" />
+
+            <Button
+                android:id="@+id/btn_edit_profile"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="32dp"
+                android:text="Edit Profile"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tv_last_donation_date" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_available_to_donate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="32dp"
+                android:text="Available to Donate"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
+
+            <Button
+                android:id="@+id/btn_view_accepted_requests"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="View Accepted Requests"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/switch_available_to_donate" />
+
+            <Button
+                android:id="@+id/btn_register_as_donor"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Register as Donor"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
+
+            <Button
+                android:id="@+id/btn_log_donation"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Log Donation Date"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/btn_view_accepted_requests" />
+
+            <Button
+                android:id="@+id/btn_view_donation_history"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="View Donation History"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/btn_log_donation" />
+
+            <Button
+                android:id="@+id/btn_manage_my_requests"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Manage My Requests"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/btn_view_donation_history" />
+
+            <Button
+                android:id="@+id/btn_logout"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Logout"
+                android:textColor="#D32F2F"
+                app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
+                app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
+                app:layout_constraintTop_toBottomOf="@+id/btn_manage_my_requests" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="User Name"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/iv_profile_icon" />
+        android:layout_gravity="bottom"
+        android:background="#FFFFFF"
+        app:elevation="16dp"
+        app:menu="@menu/bottom_nav_menu"
+        app:labelVisibilityMode="labeled"/>
 
-    <TextView
-        android:id="@+id/tv_last_donation_date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Last Donation: YYYY-MM-DD"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_user_name" />
-
-    <Button
-        android:id="@+id/btn_edit_profile"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:text="Edit Profile"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_last_donation_date" />
-
-    <!-- Donor Specific Views -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switch_available_to_donate"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="32dp"
-        android:text="Available to Donate"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
-
-    <Button
-        android:id="@+id/btn_view_accepted_requests"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="View Accepted Requests"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
-        app:layout_constraintTop_toBottomOf="@+id/switch_available_to_donate" />
-
-    <!-- Seeker Specific Views -->
-    <Button
-        android:id="@+id/btn_register_as_donor"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Register as Donor"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
-        app:layout_constraintTop_toBottomOf="@+id/btn_edit_profile" />
-
-    <Button
-        android:id="@+id/btn_log_donation"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Log Donation Date"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
-        app:layout_constraintTop_toBottomOf="@+id/btn_view_accepted_requests" />
-
-    <Button
-        android:id="@+id/btn_view_donation_history"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="View Donation History"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
-        app:layout_constraintTop_toBottomOf="@+id/btn_log_donation" />
-
-    <Button
-        android:id="@+id/btn_manage_my_requests"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Manage My Requests"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile"
-        app:layout_constraintTop_toBottomOf="@+id/btn_view_donation_history" />
-
-    <Button
-        android:id="@+id/btn_logout"
-        style="@style/Widget.AppCompat.Button.Colored"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
-        android:text="Logout"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/btn_edit_profile"
-        app:layout_constraintStart_toStartOf="@+id/btn_edit_profile" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

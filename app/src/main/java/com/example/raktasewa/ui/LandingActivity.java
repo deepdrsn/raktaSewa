@@ -1,4 +1,4 @@
-package com.example.raktasewa;
+package com.example.raktasewa.ui;
 
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +8,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.raktasewa.R;
 import com.example.raktasewa.ui.DashboardActivity;
 import com.example.raktasewa.ui.login.LoginActivity;
 import com.example.raktasewa.ui.register.RegisterActivity;
@@ -56,9 +57,6 @@ public class LandingActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Checks if a user is already logged in and if their session is valid (less than 7 days old)
-     */
     private boolean checkSession() {
         FirebaseUser currentUser = fAuth.getCurrentUser();
         if (currentUser == null) {
@@ -69,16 +67,13 @@ public class LandingActivity extends AppCompatActivity {
         long lastLoginTime = sharedPref.getLong("lastLoginTime", 0);
         long currentTime = System.currentTimeMillis();
         
-        // 1 week in milliseconds = 7 days * 24 hours * 60 mins * 60 secs * 1000 ms
         long oneWeekMillis = 7L * 24 * 60 * 60 * 1000;
 
         if (currentTime - lastLoginTime > oneWeekMillis) {
-            // Session expired
             fAuth.signOut();
             return false;
         }
 
-        // Session valid
         return true;
     }
 }

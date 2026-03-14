@@ -33,12 +33,26 @@
         <activity android:name=".ui.register.RegisterSeekerActivity" android:exported="false" />
         <activity android:name=".ui.DashboardActivity" android:exported="false" />
         <activity android:name=".ui.CreateRequestActivity" android:exported="false" />
-        <activity android:name=".ui.ViewRequestsActivity" android:exported="false" />
+        
+        <activity 
+            android:name=".ui.ViewRequestsActivity" 
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false" />
+            
         <activity android:name=".ui.DonorListActivity" android:exported="false" />
         <activity android:name=".ui.ProfileActivity" android:exported="false" />
-        <activity android:name=".ui.ManageRequestsActivity" android:exported="false" />
+        
+        <activity 
+            android:name=".ui.ManageRequestsActivity" 
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false" />
+            
         <activity android:name=".ui.EditProfileActivity" android:exported="false" />
-        <activity android:name=".ui.AcceptedRequestsActivity" android:exported="false" />
+        
+        <activity 
+            android:name=".ui.AcceptedRequestsActivity" 
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false" />
 
     </application>
 

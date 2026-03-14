@@ -1,6 +1,7 @@
 package com.example.raktasewa.ui;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import androidx.core.app.ActivityCompat;
 import com.example.raktasewa.R;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -35,6 +37,7 @@ public class DonorListActivity extends AppCompatActivity {
     private ListView listViewDonors;
     private ProgressBar progressBar;
     private TextView tvSearchStatus;
+    private BottomNavigationView bottomNavigation;
 
     private FirebaseFirestore fStore;
     private DonorAdapter donorAdapter;
@@ -51,6 +54,7 @@ public class DonorListActivity extends AppCompatActivity {
 
         initializeUI();
         setupSpinner();
+        setupBottomNavigation();
 
         fStore = FirebaseFirestore.getInstance();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -69,10 +73,7 @@ public class DonorListActivity extends AppCompatActivity {
         listViewDonors = findViewById(R.id.listViewDonors);
         progressBar = findViewById(R.id.progressBar);
         tvSearchStatus = findViewById(R.id.tvSearchStatus);
-        
-        if (tvSearchStatus == null) {
-            // If it doesn't exist in layout, we might need to add it or just use Toasts
-        }
+        bottomNavigation = findViewById(R.id.bottomNavigation);
     }
 
     private void setupSpinner() {
@@ -80,6 +81,27 @@ public class DonorListActivity extends AppCompatActivity {
                 R.array.blood_types, android.R.layout.simple_spinner_item);
         bloodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerBloodType.setAdapter(bloodAdapter);
+    }
+
+    private void setupBottomNavigation() {
+        bottomNavigation.setSelectedItemId(R.id.nav_donors);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(this, DashboardActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_donors) return true;
+            if (id == R.id.nav_requests) {
+                startActivity(new Intent(this, ViewRequestsActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
+            }
+            return false;
+        });
     }
 
     private void checkLocationPermissionAndSearch() {
@@ -97,7 +119,6 @@ public class DonorListActivity extends AppCompatActivity {
             getCurrentLocationAndSearch();
         } else {
             Toast.makeText(this, "Location permission is required for distance-based search", Toast.LENGTH_SHORT).show();
-            // Fallback: Search without location
             searchDonors(null);
         }
     }
@@ -155,7 +176,7 @@ public class DonorListActivity extends AppCompatActivity {
                             if (myLocation != null && lat != null && lon != null) {
                                 float[] results = new float[1];
                                 Location.distanceBetween(myLocation.getLatitude(), myLocation.getLongitude(), lat, lon, results);
-                                donor.setDistance(results[0] / 1000.0); // Convert to km
+                                donor.setDistance(results[0] / 1000.0);
                             }
                             
                             allMatchingDonors.add(donor);
@@ -177,10 +198,10 @@ public class DonorListActivity extends AppCompatActivity {
         if (!hasLocation) {
             donorList.addAll(allMatchingDonors);
             updateUIWithResults("Showing all matching donors (Location unavailable)");
+            donorAdapter.notifyDataSetChanged();
             return;
         }
 
-        // Sort by distance
         Collections.sort(allMatchingDonors, Comparator.comparingDouble(Donor::getDistance));
 
         int[] radii = {5, 10, 15, 20, 25};

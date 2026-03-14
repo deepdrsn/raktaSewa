@@ -16,22 +16,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.raktasewa.R;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class ViewRequestsActivity extends AppCompatActivity {
 
     private static final String TAG = "ViewRequestsActivity";
-    private static final int PAGE_LIMIT = 50; // Increased to allow better sorting client-side if needed
+    private static final int PAGE_LIMIT = 50;
 
     private RecyclerView recyclerView;
     private RequestAdapter requestAdapter;
@@ -42,6 +41,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
     private Button btnViewAllCenter, btnLoadMore;
     private FloatingActionButton fabCreateRequest;
     private Toolbar toolbar;
+    private BottomNavigationView bottomNavigation;
 
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
@@ -70,13 +70,11 @@ public class ViewRequestsActivity extends AppCompatActivity {
         setupToolbar();
         setupRecyclerView();
         setupClickListeners();
+        setupBottomNavigation();
 
-        // Start by getting user's blood type, then load requests
         fetchUserBloodType();
 
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            refreshData();
-        });
+        swipeRefreshLayout.setOnRefreshListener(this::refreshData);
     }
 
     private void initializeUI() {
@@ -86,12 +84,10 @@ public class ViewRequestsActivity extends AppCompatActivity {
         tvEmptyState = findViewById(R.id.tvEmptyState);
         tvFilterStatus = findViewById(R.id.tvFilterStatus);
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-        btnViewAllCenter = findViewById(R.id.btnViewAll); // Reusing ID from layout
+        btnViewAllCenter = findViewById(R.id.btnViewAll);
         btnLoadMore = findViewById(R.id.btnLoadMore);
         fabCreateRequest = findViewById(R.id.fabCreateRequest);
-        
-        btnViewAllCenter.setVisibility(View.GONE);
-        btnLoadMore.setVisibility(View.GONE);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
     }
 
     private void setupToolbar() {
@@ -116,10 +112,29 @@ public class ViewRequestsActivity extends AppCompatActivity {
             btnViewAllCenter.setVisibility(View.GONE);
             refreshData();
         });
-
         btnLoadMore.setOnClickListener(v -> loadRequests(true));
-
         fabCreateRequest.setOnClickListener(v -> startActivity(new Intent(this, CreateRequestActivity.class)));
+    }
+
+    private void setupBottomNavigation() {
+        bottomNavigation.setSelectedItemId(R.id.nav_requests);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(this, DashboardActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_donors) {
+                startActivity(new Intent(this, DonorListActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_requests) return true;
+            if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
+            }
+            return false;
+        });
     }
 
     private void fetchUserBloodType() {
@@ -132,16 +147,16 @@ public class ViewRequestsActivity extends AppCompatActivity {
                             tvFilterStatus.setText("Matching your blood group: " + userBloodType);
                             loadRequests(false);
                         } else {
-                            enableViewAll("No blood group in your profile.");
+                            enableViewAll();
                         }
                     } else {
-                        enableViewAll("Profile not found.");
+                        enableViewAll();
                     }
                 })
-                .addOnFailureListener(e -> enableViewAll("Error fetching profile."));
+                .addOnFailureListener(e -> enableViewAll());
     }
 
-    private void enableViewAll(String reason) {
+    private void enableViewAll() {
         isViewAllMode = true;
         tvFilterStatus.setText("Showing all requests");
         loadRequests(false);
@@ -161,14 +176,10 @@ public class ViewRequestsActivity extends AppCompatActivity {
             tvEmptyState.setVisibility(View.GONE);
         }
 
-        // Ordering by isEmergency (true/false) and then by timestam
-        // If index doesn't exist, it might fail. 
-        // We'll use multiple orderBys to ensure emergency is on top.
         Query query = fStore.collection("blood_requests")
                 .orderBy("isEmergency", Query.Direction.DESCENDING)
                 .orderBy("timestamp", Query.Direction.DESCENDING);
 
-        // Apply blood type filter only if NOT in "View All" mode
         if (!isViewAllMode && userBloodType != null) {
             query = query.whereEqualTo("bloodType", userBloodType);
         }
@@ -194,11 +205,9 @@ public class ViewRequestsActivity extends AppCompatActivity {
                             requestList.add(req);
                         }
                     }
-                    
                     requestAdapter.notifyDataSetChanged();
                     btnLoadMore.setVisibility(documents.size() == PAGE_LIMIT ? View.VISIBLE : View.GONE);
                 } else if (!isLoadMore) {
-                    // No results at all
                     tvEmptyState.setVisibility(View.VISIBLE);
                     if (!isViewAllMode) {
                         tvEmptyState.setText("No requests for your blood group (" + userBloodType + ").");
@@ -208,19 +217,16 @@ public class ViewRequestsActivity extends AppCompatActivity {
                     }
                 }
             } else {
-                Toast.makeText(this, "Failed to load: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                Log.e(TAG, "Query error", task.getException());
-                
-                // Fallback: If composite index is missing, try loading without sorting by emergency first
                 if (task.getException() != null && task.getException().getMessage().contains("FAILED_PRECONDITION")) {
                    loadRequestsWithoutSorting(isLoadMore);
+                } else {
+                    Toast.makeText(this, "Error: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
         });
     }
 
     private void loadRequestsWithoutSorting(boolean isLoadMore) {
-        // This is a fallback if the composite index hasn't been created yet.
         Query query = fStore.collection("blood_requests")
                 .orderBy("timestamp", Query.Direction.DESCENDING);
 
@@ -245,7 +251,6 @@ public class ViewRequestsActivity extends AppCompatActivity {
                             requestList.add(req);
                         }
                     }
-                    // Client side sort as fallback
                     Collections.sort(requestList, (o1, o2) -> {
                         if (o1.isEmergency() != o2.isEmergency()) {
                             return o1.isEmergency() ? -1 : 1;

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.raktasewa.R;
 import com.example.raktasewa.ui.login.LoginActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
@@ -30,6 +31,8 @@ public class ProfileActivity extends AppCompatActivity {
     private Button btnEditProfile, btnLogDonation, btnViewHistory, btnManageRequests, btnLogout;
     private Button btnViewAcceptedRequests, btnRegisterAsDonor;
     private SwitchMaterial switchAvailable;
+    private BottomNavigationView bottomNavigation;
+    
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
     private String lastDonationDateStr;
@@ -46,6 +49,7 @@ public class ProfileActivity extends AppCompatActivity {
         initializeUI();
         loadUserProfile();
         setupClickListeners();
+        setupBottomNavigation();
     }
 
     private void initializeUI() {
@@ -59,6 +63,28 @@ public class ProfileActivity extends AppCompatActivity {
         switchAvailable = findViewById(R.id.switch_available_to_donate);
         btnViewAcceptedRequests = findViewById(R.id.btn_view_accepted_requests);
         btnRegisterAsDonor = findViewById(R.id.btn_register_as_donor);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
+    }
+
+    private void setupBottomNavigation() {
+        bottomNavigation.setSelectedItemId(R.id.nav_profile);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(this, DashboardActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_donors) {
+                startActivity(new Intent(this, DonorListActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_requests) {
+                startActivity(new Intent(this, ViewRequestsActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_profile) return true;
+            return false;
+        });
     }
 
     private void loadUserProfile() {
@@ -93,21 +119,21 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void showDonorViews() {
-        switchAvailable.setVisibility(View.VISIBLE);
-        btnViewAcceptedRequests.setVisibility(View.VISIBLE);
-        btnLogDonation.setVisibility(View.VISIBLE);
-        btnViewHistory.setVisibility(View.VISIBLE);
-        tvLastDonationDate.setVisibility(View.VISIBLE);
-        btnRegisterAsDonor.setVisibility(View.GONE);
+        if (switchAvailable != null) switchAvailable.setVisibility(View.VISIBLE);
+        if (btnViewAcceptedRequests != null) btnViewAcceptedRequests.setVisibility(View.VISIBLE);
+        if (btnLogDonation != null) btnLogDonation.setVisibility(View.VISIBLE);
+        if (btnViewHistory != null) btnViewHistory.setVisibility(View.VISIBLE);
+        if (tvLastDonationDate != null) tvLastDonationDate.setVisibility(View.VISIBLE);
+        if (btnRegisterAsDonor != null) btnRegisterAsDonor.setVisibility(View.GONE);
     }
 
     private void showSeekerViews() {
-        switchAvailable.setVisibility(View.GONE);
-        btnViewAcceptedRequests.setVisibility(View.GONE);
-        btnLogDonation.setVisibility(View.GONE);
-        btnViewHistory.setVisibility(View.GONE);
-        tvLastDonationDate.setVisibility(View.GONE);
-        btnRegisterAsDonor.setVisibility(View.VISIBLE);
+        if (switchAvailable != null) switchAvailable.setVisibility(View.GONE);
+        if (btnViewAcceptedRequests != null) btnViewAcceptedRequests.setVisibility(View.GONE);
+        if (btnLogDonation != null) btnLogDonation.setVisibility(View.GONE);
+        if (btnViewHistory != null) btnViewHistory.setVisibility(View.GONE);
+        if (tvLastDonationDate != null) tvLastDonationDate.setVisibility(View.GONE);
+        if (btnRegisterAsDonor != null) btnRegisterAsDonor.setVisibility(View.VISIBLE);
     }
 
     private void setupClickListeners() {
@@ -120,7 +146,6 @@ public class ProfileActivity extends AppCompatActivity {
         });
 
         btnRegisterAsDonor.setOnClickListener(v -> {
-            // Navigate to EditProfile but with intention to register as donor
             Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
             intent.putExtra("registerAsDonor", true);
             startActivity(intent);

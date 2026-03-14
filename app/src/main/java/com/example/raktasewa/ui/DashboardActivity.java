@@ -5,51 +5,66 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.raktasewa.R;
 import com.example.raktasewa.ui.login.LoginActivity;
-import com.google.android.gms.location.CurrentLocationRequest;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.Priority;
-import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
-import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class DashboardActivity extends AppCompatActivity {
 
     private static final String TAG = "DashboardActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
 
-    private TextView tvWelcome;
-    private Button btnCreateRequest, btnViewRequests, btnDonorList, btnProfile, btnLogout;
+    private TextView tvUserName, tvDonorBloodType, tvLastDonated, tvEligibilityMessage, tvActiveRequestsCount, tvAvailableDonorsCount;
+    private SwitchMaterial switchAvailability;
+    private MaterialCardView cardDonorStatus, btnEmergencyRequest, btnCreateRequest, btnFindDonors, btnViewRequests, btnProfile;
+    private RecyclerView rvNearbyRequests;
+    private ProgressBar pbRequests;
+    private BottomNavigationView bottomNavigation;
+    private ImageView ivNotifications;
 
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
     private FirebaseUser currentUser;
-    private FusedLocationProviderClient fusedLocationClient;
+    
+    private RequestAdapter requestAdapter;
+    private List<BloodRequest> requestList;
+    private String userRole = "";
+    private String userBloodType = "";
+    private String lastDonationDateStr = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +74,6 @@ public class DashboardActivity extends AppCompatActivity {
         fAuth = FirebaseAuth.getInstance();
         fStore = FirebaseFirestore.getInstance();
         currentUser = fAuth.getCurrentUser();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         if (currentUser == null) {
             navigateToLogin();
@@ -67,163 +81,215 @@ public class DashboardActivity extends AppCompatActivity {
         }
 
         initializeUI();
-        
-        // Show all buttons immediately so they don't disappear
-        showAllButtons();
-        
-        // Setup click listeners immediately
+        setupRecyclerView();
         setupClickListeners();
+        setupBottomNavigation();
         
-        // Load profile in background to update welcome message and check role for location
         loadUserProfile();
+        loadQuickStats();
+        loadNearbyRequests();
     }
 
     private void initializeUI() {
-        tvWelcome = findViewById(R.id.tvWelcome);
+        tvUserName = findViewById(R.id.tvUserName);
+        tvDonorBloodType = findViewById(R.id.tvDonorBloodType);
+        tvLastDonated = findViewById(R.id.tvLastDonated);
+        tvEligibilityMessage = findViewById(R.id.tvEligibilityMessage);
+        tvActiveRequestsCount = findViewById(R.id.tvActiveRequestsCount);
+        tvAvailableDonorsCount = findViewById(R.id.tvAvailableDonorsCount);
+        
+        switchAvailability = findViewById(R.id.switchAvailability);
+        cardDonorStatus = findViewById(R.id.cardDonorStatus);
+        btnEmergencyRequest = findViewById(R.id.btnEmergencyRequest);
         btnCreateRequest = findViewById(R.id.btnCreateRequest);
+        btnFindDonors = findViewById(R.id.btnFindDonors);
         btnViewRequests = findViewById(R.id.btnViewRequests);
-        btnDonorList = findViewById(R.id.btnDonorList);
         btnProfile = findViewById(R.id.btnProfile);
-        btnLogout = findViewById(R.id.btnLogout);
+        
+        rvNearbyRequests = findViewById(R.id.rvNearbyRequests);
+        pbRequests = findViewById(R.id.pbRequests);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
+        ivNotifications = findViewById(R.id.ivNotifications);
     }
 
-    private void showAllButtons() {
-        btnCreateRequest.setVisibility(View.VISIBLE);
-        btnViewRequests.setVisibility(View.VISIBLE);
-        btnDonorList.setVisibility(View.VISIBLE);
-        btnProfile.setVisibility(View.VISIBLE);
-        btnLogout.setVisibility(View.VISIBLE);
-    }
-
-    private void loadUserProfile() {
-        DocumentReference docRef = fStore.collection("users").document(currentUser.getUid());
-
-        docRef.get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot document = task.getResult();
-                if (document != null && document.exists()) {
-                    String name = document.getString("fullName");
-                    tvWelcome.setText("Welcome, " + (name != null ? name : "User"));
-
-                    String role = document.getString("role");
-                    if ("donor".equals(role)) {
-                        checkAndRequestLocation();
-                    }
-                }
-            } else {
-                Log.d(TAG, "Profile fetch failed: " + task.getException());
-            }
-        });
-    }
-
-    private void checkAndRequestLocation() {
-        SharedPreferences sharedPref = getSharedPreferences("RaktaSewaPrefs", Context.MODE_PRIVATE);
-        long lastUpdate = sharedPref.getLong("lastLocationUpdate", 0);
-        long currentTime = System.currentTimeMillis();
-        long oneDayMillis = 24 * 60 * 60 * 1000;
-
-        if (currentTime - lastUpdate > oneDayMillis) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
-            } else {
-                updateDonorLocation();
-            }
-        }
-    }
-
-    private void updateDonorLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        CurrentLocationRequest locationRequest = new CurrentLocationRequest.Builder()
-                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .setDurationMillis(10000)
-                .build();
-
-        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
-        fusedLocationClient.getCurrentLocation(locationRequest, cancellationTokenSource.getToken())
-                .addOnSuccessListener(location -> {
-                    if (location != null) {
-                        saveLocationToFirestore(location);
-                    }
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Location fetch failed", e));
-    }
-
-    private void saveLocationToFirestore(Location location) {
-        double lat = location.getLatitude();
-        double lon = location.getLongitude();
-
-        new Thread(() -> {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            String city = "Unknown";
-            try {
-                List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
-                if (addresses != null && !addresses.isEmpty()) {
-                    Address address = addresses.get(0);
-                    city = address.getLocality();
-                    if (city == null) {
-                        city = address.getSubAdminArea(); // Fallback
-                    }
-                }
-            } catch (IOException e) {
-                Log.e(TAG, "Geocoder failed", e);
-            }
-
-            final String finalCity = city;
-            
-            Map<String, Object> locationData = new HashMap<>();
-            locationData.put("latitude", lat);
-            locationData.put("longitude", lon);
-            locationData.put("city", finalCity);
-            locationData.put("lastLocationUpdate", System.currentTimeMillis());
-
-            fStore.collection("users").document(currentUser.getUid())
-                    .update(locationData)
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d(TAG, "Location updated in Firestore for donor");
-                        SharedPreferences sharedPref = getSharedPreferences("RaktaSewaPrefs", Context.MODE_PRIVATE);
-                        sharedPref.edit().putLong("lastLocationUpdate", System.currentTimeMillis()).apply();
-                    })
-                    .addOnFailureListener(e -> Log.e(TAG, "Failed to update location in Firestore", e));
-        }).start();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                updateDonorLocation();
-            }
-        }
+    private void setupRecyclerView() {
+        requestList = new ArrayList<>();
+        requestAdapter = new RequestAdapter(this, requestList, currentUser.getUid());
+        rvNearbyRequests.setLayoutManager(new LinearLayoutManager(this));
+        rvNearbyRequests.setAdapter(requestAdapter);
     }
 
     private void setupClickListeners() {
+        btnEmergencyRequest.setOnClickListener(v -> {
+            Intent intent = new Intent(this, CreateRequestActivity.class);
+            intent.putExtra("isEmergency", true);
+            startActivity(intent);
+        });
+
         btnCreateRequest.setOnClickListener(v -> startActivity(new Intent(this, CreateRequestActivity.class)));
-        
-        btnViewRequests.setOnClickListener(v -> {
-            startActivity(new Intent(this, ViewRequestsActivity.class));
-        });
-
-        btnDonorList.setOnClickListener(v -> {
-           // Toast.makeText(this, "Donor list coming soon", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, DonorListActivity.class));
-        });
-
+        btnFindDonors.setOnClickListener(v -> startActivity(new Intent(this, DonorListActivity.class)));
+        btnViewRequests.setOnClickListener(v -> startActivity(new Intent(this, ViewRequestsActivity.class)));
         btnProfile.setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
 
-        btnLogout.setOnClickListener(v -> {
-            fAuth.signOut();
-            navigateToLogin();
+        switchAvailability.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked && !isEligibleToDonate()) {
+                switchAvailability.setChecked(false);
+                Toast.makeText(this, "You are not eligible to donate yet.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            updateAvailability(isChecked);
+        });
+        
+        ivNotifications.setOnClickListener(v -> Toast.makeText(this, "No new notifications", Toast.LENGTH_SHORT).show());
+    }
+
+    private void setupBottomNavigation() {
+        bottomNavigation.setSelectedItemId(R.id.nav_home);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) return true;
+            if (id == R.id.nav_donors) {
+                startActivity(new Intent(this, DonorListActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_requests) {
+                startActivity(new Intent(this, ViewRequestsActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
+            }
+            return false;
         });
     }
 
+    private void loadUserProfile() {
+        fStore.collection("users").document(currentUser.getUid())
+                .addSnapshotListener((document, error) -> {
+                    if (error != null) return;
+                    if (document != null && document.exists()) {
+                        String name = document.getString("fullName");
+                        tvUserName.setText(name != null ? name : "User");
+                        
+                        userRole = document.getString("role");
+                        userBloodType = document.getString("bloodType");
+                        lastDonationDateStr = document.getString("lastDonatedDate");
+                        Boolean isAvailable = document.getBoolean("available");
+                        
+                        if ("donor".equals(userRole)) {
+                            cardDonorStatus.setVisibility(View.VISIBLE);
+                            tvDonorBloodType.setText(userBloodType != null ? userBloodType : "--");
+                            tvLastDonated.setText(lastDonationDateStr != null && !lastDonationDateStr.isEmpty() ? lastDonationDateStr : "Never");
+                            
+                            switchAvailability.setChecked(isAvailable != null ? isAvailable : false);
+                            checkEligibility();
+                        } else {
+                            cardDonorStatus.setVisibility(View.GONE);
+                        }
+                    }
+                });
+    }
+
+    private void checkEligibility() {
+        if (lastDonationDateStr == null || lastDonationDateStr.isEmpty()) {
+            tvEligibilityMessage.setVisibility(View.GONE);
+            return;
+        }
+
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date lastDonation = sdf.parse(lastDonationDateStr);
+            if (lastDonation == null) return;
+
+            long diffInMillis = Math.abs(System.currentTimeMillis() - lastDonation.getTime());
+            long diffInDays = TimeUnit.DAYS.convert(diffInMillis, TimeUnit.MILLISECONDS);
+
+            if (diffInDays < 90) {
+                long remainingDays = 90 - diffInDays;
+                tvEligibilityMessage.setVisibility(View.VISIBLE);
+                tvEligibilityMessage.setText("You can donate again in " + remainingDays + " days.");
+                if (switchAvailability.isChecked()) {
+                    updateAvailability(false);
+                    switchAvailability.setChecked(false);
+                }
+            } else {
+                tvEligibilityMessage.setVisibility(View.GONE);
+            }
+        } catch (ParseException e) {
+            tvEligibilityMessage.setVisibility(View.GONE);
+        }
+    }
+
+    private boolean isEligibleToDonate() {
+        if (lastDonationDateStr == null || lastDonationDateStr.isEmpty()) return true;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date lastDonation = sdf.parse(lastDonationDateStr);
+            if (lastDonation == null) return true;
+
+            long diffInMillis = Math.abs(System.currentTimeMillis() - lastDonation.getTime());
+            long diffInDays = TimeUnit.DAYS.convert(diffInMillis, TimeUnit.MILLISECONDS);
+            return diffInDays >= 90;
+        } catch (ParseException e) {
+            return true;
+        }
+    }
+
+    private void updateAvailability(boolean available) {
+        fStore.collection("users").document(currentUser.getUid())
+                .update("available", available)
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to update availability", Toast.LENGTH_SHORT).show());
+    }
+
+    private void loadQuickStats() {
+        // Active Requests
+        fStore.collection("blood_requests")
+                .whereEqualTo("status", "pending")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    tvActiveRequestsCount.setText(String.valueOf(queryDocumentSnapshots.size()));
+                });
+
+        // Available Donors
+        fStore.collection("users")
+                .whereEqualTo("role", "donor")
+                .whereEqualTo("available", true)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    tvAvailableDonorsCount.setText(String.valueOf(queryDocumentSnapshots.size()));
+                });
+    }
+
+    private void loadNearbyRequests() {
+        pbRequests.setVisibility(View.VISIBLE);
+        fStore.collection("blood_requests")
+                .whereEqualTo("status", "pending")
+                .orderBy("isEmergency", Query.Direction.DESCENDING)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(10)
+                .addSnapshotListener((value, error) -> {
+                    pbRequests.setVisibility(View.GONE);
+                    if (error != null) {
+                        Log.e(TAG, "Error loading requests", error);
+                        return;
+                    }
+                    if (value != null) {
+                        requestList.clear();
+                        for (DocumentSnapshot doc : value.getDocuments()) {
+                            BloodRequest request = doc.toObject(BloodRequest.class);
+                            if (request != null) {
+                                request.setRequestId(doc.getId());
+                                requestList.add(request);
+                            }
+                        }
+                        requestAdapter.notifyDataSetChanged();
+                    }
+                });
+    }
+
     private void navigateToLogin() {
-        Intent intent = new Intent(DashboardActivity.this, LoginActivity.class);
+        Intent intent = new Intent(this, LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
