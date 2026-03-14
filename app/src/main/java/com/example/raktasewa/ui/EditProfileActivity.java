@@ -5,8 +5,10 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,7 +31,8 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private EditText etFullName, etEmail, etPhone;
     private Button btnSaveChanges, btnUpdateLocation;
-    private TextView tvLocationStatus;
+    private TextView tvLocationStatus, tvBloodTypeLabel;
+    private Spinner spinnerBloodType;
 
     private FirebaseAuth fAuth;
     private FirebaseFirestore fStore;
@@ -37,6 +40,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private String userId;
     private FusedLocationProviderClient fusedLocationClient;
     private Double latitude = null, longitude = null;
+    private boolean registerAsDonor = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +53,11 @@ public class EditProfileActivity extends AppCompatActivity {
         userId = currentUser.getUid();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        // Check if we are here to upgrade to donor
+        registerAsDonor = getIntent().getBooleanExtra("registerAsDonor", false);
+
         initializeUI();
+        setupSpinner();
         loadUserProfile();
 
         btnUpdateLocation.setOnClickListener(v -> checkLocationPermission());
@@ -63,9 +71,23 @@ public class EditProfileActivity extends AppCompatActivity {
         btnSaveChanges = findViewById(R.id.btn_save_changes);
         btnUpdateLocation = findViewById(R.id.btnUpdateLocation);
         tvLocationStatus = findViewById(R.id.tvLocationStatus);
+        tvBloodTypeLabel = findViewById(R.id.tv_blood_type_label);
+        spinnerBloodType = findViewById(R.id.spinner_blood_type);
         
-        // Ensure buttons exist in the layout before setting visibility
-        if (btnUpdateLocation != null) btnUpdateLocation.setVisibility(View.GONE);
+        if (registerAsDonor) {
+            btnSaveChanges.setText("Register as Donor");
+            tvBloodTypeLabel.setVisibility(View.VISIBLE);
+            spinnerBloodType.setVisibility(View.VISIBLE);
+            btnUpdateLocation.setVisibility(View.VISIBLE);
+            tvLocationStatus.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setupSpinner() {
+        ArrayAdapter<CharSequence> bloodAdapter = ArrayAdapter.createFromResource(this,
+                R.array.blood_types, android.R.layout.simple_spinner_item);
+        bloodAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerBloodType.setAdapter(bloodAdapter);
     }
 
     private void loadUserProfile() {
@@ -78,12 +100,21 @@ public class EditProfileActivity extends AppCompatActivity {
                 
                 String role = documentSnapshot.getString("role");
                 if ("donor".equals(role)) {
-                    if (btnUpdateLocation != null) btnUpdateLocation.setVisibility(View.VISIBLE);
-                    if (tvLocationStatus != null) tvLocationStatus.setVisibility(View.VISIBLE);
+                    btnUpdateLocation.setVisibility(View.VISIBLE);
+                    tvLocationStatus.setVisibility(View.VISIBLE);
+                    tvBloodTypeLabel.setVisibility(View.VISIBLE);
+                    spinnerBloodType.setVisibility(View.VISIBLE);
                     
                     latitude = documentSnapshot.getDouble("latitude");
                     longitude = documentSnapshot.getDouble("longitude");
                     
+                    String bloodType = documentSnapshot.getString("bloodType");
+                    if (bloodType != null) {
+                        ArrayAdapter adapter = (ArrayAdapter) spinnerBloodType.getAdapter();
+                        int pos = adapter.getPosition(bloodType);
+                        spinnerBloodType.setSelection(pos);
+                    }
+
                     if (latitude != null && longitude != null) {
                         tvLocationStatus.setText("Location already saved");
                         tvLocationStatus.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
@@ -118,7 +149,7 @@ public class EditProfileActivity extends AppCompatActivity {
                 longitude = location.getLongitude();
                 tvLocationStatus.setText("New location captured!");
                 tvLocationStatus.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
-                Toast.makeText(this, "Location updated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Location captured", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Could not get location. Is GPS on?", Toast.LENGTH_SHORT).show();
             }
@@ -127,11 +158,21 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void saveProfileChanges() {
         String fullName = etFullName.getText().toString().trim();
-        String email = etEmail.getText().toString().trim();
         String phone = etPhone.getText().toString().trim();
+        String bloodType = spinnerBloodType.getSelectedItem().toString();
 
-        if (fullName.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+        if (fullName.isEmpty() || phone.isEmpty()) {
             Toast.makeText(this, "All fields are required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if ((registerAsDonor || spinnerBloodType.getVisibility() == View.VISIBLE) && bloodType.equals("Select Blood Type")) {
+            Toast.makeText(this, "Please select your blood type", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (registerAsDonor && (latitude == null || longitude == null)) {
+            Toast.makeText(this, "Location is required to register as a donor", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -139,19 +180,28 @@ public class EditProfileActivity extends AppCompatActivity {
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("fullName", fullName);
-        updates.put("email", email);
         updates.put("phone", phone);
+        
+        if (registerAsDonor) {
+            updates.put("role", "donor");
+            updates.put("available", true);
+        }
+        
+        if (spinnerBloodType.getVisibility() == View.VISIBLE) {
+            updates.put("bloodType", bloodType);
+        }
         
         if (latitude != null) updates.put("latitude", latitude);
         if (longitude != null) updates.put("longitude", longitude);
 
         docRef.update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(EditProfileActivity.this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
+                    String msg = registerAsDonor ? "Registered as Donor successfully" : "Profile updated successfully";
+                    Toast.makeText(EditProfileActivity.this, msg, Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(EditProfileActivity.this, "Error updating profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditProfileActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }
