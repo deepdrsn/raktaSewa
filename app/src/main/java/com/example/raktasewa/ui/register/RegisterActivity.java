@@ -29,6 +29,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -75,7 +76,6 @@ public class RegisterActivity extends AppCompatActivity {
 
         setupSpinners();
         
-        // Setup DatePicker for etLastDonated
         etLastDonated.setFocusable(false);
         etLastDonated.setOnClickListener(v -> showDatePickerDialog());
 
@@ -96,12 +96,10 @@ public class RegisterActivity extends AppCompatActivity {
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(this,
                 (view, year1, monthOfYear, dayOfMonth) -> {
-                    // Format the date to YYYY-MM-DD
                     String date = String.format(Locale.getDefault(), "%d-%02d-%02d", year1, monthOfYear + 1, dayOfMonth);
                     etLastDonated.setText(date);
                 }, year, month, day);
         
-        // Don't allow selecting future dates
         datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
         datePickerDialog.show();
     }
@@ -182,30 +180,48 @@ public class RegisterActivity extends AppCompatActivity {
                         fUser.sendEmailVerification();
 
                         String userID = fUser.getUid();
-                        DocumentReference documentReference = fStore.collection("users").document(userID);
-
-                        Map<String, Object> user = new HashMap<>();
-                        user.put("role", "donor");
-                        user.put("fullName", nameStr);
-                        user.put("email", emailStr);
-                        user.put("phone", phoneStr);
-                        user.put("address", addressStr);
-                        user.put("bloodType", bloodTypeStr);
-                        user.put("gender", genderStr);
-                        user.put("lastDonatedDate", lastDonatedStr);
-                        user.put("latitude", latitude);
-                        user.put("longitude", longitude);
-                        user.put("available", true);
-
-                        documentReference.set(user).addOnSuccessListener(aVoid -> {
-                            Toast.makeText(RegisterActivity.this, "Donor Registered Successfully", Toast.LENGTH_LONG).show();
-                            startActivity(new Intent(getApplicationContext(), LoginActivity.class));
-                            finishAffinity();
+                        
+                        // Fetch FCM Token before saving user to Firestore
+                        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(tokenTask -> {
+                            String fcmToken = tokenTask.isSuccessful() ? tokenTask.getResult() : null;
+                            saveUserToFirestore(userID, nameStr, emailStr, phoneStr, addressStr, bloodTypeStr, genderStr, lastDonatedStr, fcmToken);
                         });
+                        
                     } else {
                         Toast.makeText(RegisterActivity.this, "Error! " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                         progressBar.setVisibility(View.GONE);
                     }
                 });
+    }
+
+    private void saveUserToFirestore(String userID, String name, String email, String phone, String address, String blood, String gender, String lastDonated, String fcmToken) {
+        DocumentReference documentReference = fStore.collection("users").document(userID);
+
+        Map<String, Object> user = new HashMap<>();
+        user.put("role", "donor");
+        user.put("fullName", name);
+        user.put("email", email);
+        user.put("phone", phone);
+        user.put("address", address);
+        user.put("bloodType", blood);
+        user.put("gender", gender);
+        user.put("lastDonatedDate", lastDonated);
+        user.put("latitude", latitude);
+        user.put("longitude", longitude);
+        user.put("available", true);
+        if (fcmToken != null) user.put("fcmToken", fcmToken);
+
+        documentReference.set(user).addOnSuccessListener(aVoid -> {
+            if (!TextUtils.isEmpty(lastDonated)) {
+                Map<String, Object> historyRecord = new HashMap<>();
+                historyRecord.put("date", lastDonated);
+                historyRecord.put("timestamp", System.currentTimeMillis());
+                documentReference.collection("donation_history").add(historyRecord);
+            }
+            
+            Toast.makeText(RegisterActivity.this, "Donor Registered Successfully", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(getApplicationContext(), LoginActivity.class));
+            finishAffinity();
+        });
     }
 }

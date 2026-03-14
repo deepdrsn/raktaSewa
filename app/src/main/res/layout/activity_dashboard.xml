@@ -168,7 +168,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Emergency Request Button -->
+            <!-- Main Action Button -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnEmergencyRequest"
                 android:layout_width="match_parent"
@@ -190,7 +190,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="EMERGENCY BLOOD REQUEST"
+                        android:text="CREATE BLOOD REQUEST"
                         android:textColor="#FFFFFF"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -198,7 +198,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tap here for urgent situations"
+                        android:text="Tap here to create blood request"
                         android:textColor="#FFCDD2"
                         android:textSize="12sp" />
                 </LinearLayout>
