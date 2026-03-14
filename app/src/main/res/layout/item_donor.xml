@@ -7,13 +7,28 @@
     android:background="@android:drawable/list_selector_background"
     android:layout_marginBottom="8dp">
 
-    <TextView
-        android:id="@+id/tvDonorName"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#333333"/>
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvDonorName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333"/>
+
+        <TextView
+            android:id="@+id/tvDonorDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="#4CAF50"
+            android:textStyle="bold"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvAvailability"

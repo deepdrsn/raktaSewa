@@ -12,6 +12,7 @@ import android.widget.TextView;
 import com.example.raktasewa.R;
 
 import java.util.List;
+import java.util.Locale;
 
 public class DonorAdapter extends BaseAdapter {
 
@@ -47,6 +48,7 @@ public class DonorAdapter extends BaseAdapter {
         Donor donor = donorList.get(position);
 
         TextView tvName = convertView.findViewById(R.id.tvDonorName);
+        TextView tvDistance = convertView.findViewById(R.id.tvDonorDistance);
         TextView tvBloodType = convertView.findViewById(R.id.tvDonorBloodType);
         TextView tvPhone = convertView.findViewById(R.id.tvDonorPhone);
         TextView tvAddress = convertView.findViewById(R.id.tvDonorAddress);
@@ -56,6 +58,14 @@ public class DonorAdapter extends BaseAdapter {
         Button btnContact = convertView.findViewById(R.id.btnContactDonor);
 
         tvName.setText(donor.getName());
+        
+        if (donor.getDistance() > 0) {
+            tvDistance.setVisibility(View.VISIBLE);
+            tvDistance.setText(String.format(Locale.getDefault(), "%.1f km", donor.getDistance()));
+        } else {
+            tvDistance.setVisibility(View.GONE);
+        }
+
         tvBloodType.setText("Blood Type: " + donor.getBloodType());
         tvAddress.setText("Address: " + donor.getAddress());
         
@@ -74,18 +84,14 @@ public class DonorAdapter extends BaseAdapter {
         }
 
         if (donor.isAvailableToDonate()) {
-            if (tvAvailability != null) {
-                tvAvailability.setText("Available");
-                tvAvailability.setTextColor(convertView.getContext().getResources().getColor(android.R.color.holo_green_dark));
-            }
+            tvAvailability.setText("Available");
+            tvAvailability.setTextColor(convertView.getContext().getResources().getColor(android.R.color.holo_green_dark));
             tvPhone.setVisibility(View.VISIBLE);
             tvPhone.setText("Phone: " + donor.getPhone());
             btnContact.setVisibility(View.VISIBLE);
         } else {
-            if (tvAvailability != null) {
-                tvAvailability.setText("Not Available");
-                tvAvailability.setTextColor(convertView.getContext().getResources().getColor(android.R.color.holo_red_dark));
-            }
+            tvAvailability.setText("Not Available");
+            tvAvailability.setTextColor(convertView.getContext().getResources().getColor(android.R.color.holo_red_dark));
             tvPhone.setVisibility(View.GONE);
             btnContact.setVisibility(View.GONE);
         }

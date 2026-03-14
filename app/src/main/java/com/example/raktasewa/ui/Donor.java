@@ -10,6 +10,7 @@ public class Donor {
     private double latitude;
     private double longitude;
     private String city;
+    private double distance; // Added distance field
 
     public Donor(String name, String bloodType, String phone, String address, String lastDonatedDate, boolean availableToDonate) {
         this.name = name;
@@ -42,4 +43,6 @@ public class Donor {
     public double getLatitude() { return latitude; }
     public double getLongitude() { return longitude; }
     public String getCity() { return city; }
+    public double getDistance() { return distance; }
+    public void setDistance(double distance) { this.distance = distance; }
 }
