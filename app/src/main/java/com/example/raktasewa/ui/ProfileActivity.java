@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class ProfileActivity extends AppCompatActivity {
 
     private static final String TAG = "ProfileActivity";
-    private TextView tvUserName, tvLastDonationDate;
+    private TextView tvUserName, tvLastDonationDate, tvUserRole;
     private Button btnEditProfile, btnLogDonation, btnViewHistory, btnManageRequests, btnLogout;
     private Button btnViewAcceptedRequests, btnRegisterAsDonor;
     private SwitchMaterial switchAvailable;
@@ -58,6 +58,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void initializeUI() {
         tvUserName = findViewById(R.id.tv_user_name);
+        tvUserRole = findViewById(R.id.tv_user_role);
         tvLastDonationDate = findViewById(R.id.tv_last_donation_date);
         btnEditProfile = findViewById(R.id.btn_edit_profile);
         btnLogDonation = findViewById(R.id.btn_log_donation);
@@ -76,14 +77,17 @@ public class ProfileActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 startActivity(new Intent(this, DashboardActivity.class));
+                finish();
                 return true;
             }
             if (id == R.id.nav_donors) {
                 startActivity(new Intent(this, DonorListActivity.class));
+                finish();
                 return true;
             }
             if (id == R.id.nav_requests) {
                 startActivity(new Intent(this, ViewRequestsActivity.class));
+                finish();
                 return true;
             }
             if (id == R.id.nav_profile) return true;
@@ -101,6 +105,9 @@ public class ProfileActivity extends AppCompatActivity {
             if (documentSnapshot.exists()) {
                 tvUserName.setText(documentSnapshot.getString("fullName"));
                 userRole = documentSnapshot.getString("role");
+                
+                String roleDisplay = userRole != null ? userRole.substring(0, 1).toUpperCase() + userRole.substring(1) : "Unknown";
+                tvUserRole.setText("Role: " + roleDisplay);
                 
                 if ("donor".equals(userRole)) {
                     showDonorViews();
@@ -206,16 +213,14 @@ public class ProfileActivity extends AppCompatActivity {
         record.put("date", dateStr);
         record.put("timestamp", System.currentTimeMillis());
 
-        // 1. Add to donation history sub-collection
         fStore.collection("users").document(userId).collection("donation_history")
                 .add(record)
                 .addOnSuccessListener(documentReference -> {
-                    // 2. Update the main user profile with the new lastDonatedDate
                     fStore.collection("users").document(userId)
                             .update("lastDonatedDate", dateStr)
                             .addOnSuccessListener(aVoid -> {
                                 Toast.makeText(this, "Donation logged successfully", Toast.LENGTH_SHORT).show();
-                                loadUserProfile(); // Refresh UI
+                                loadUserProfile(); 
                             });
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Error logging donation", Toast.LENGTH_SHORT).show());
