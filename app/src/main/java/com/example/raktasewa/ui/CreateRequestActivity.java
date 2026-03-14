@@ -36,6 +36,7 @@ import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -163,13 +164,12 @@ public class CreateRequestActivity extends AppCompatActivity {
             return;
         }
 
-        tvLocationStatus.setText("Locating... (Make sure you are outdoors or near a window)");
+        tvLocationStatus.setText("Locating...");
         btnGetLocation.setEnabled(false);
 
-        // Define the request
         CurrentLocationRequest locationRequest = new CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .setDurationMillis(10000) // 10 second timeout
+                .setDurationMillis(10000)
                 .build();
 
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -180,13 +180,11 @@ public class CreateRequestActivity extends AppCompatActivity {
                     if (location != null) {
                         updateLocationData(location);
                     } else {
-                        Log.d(TAG, "getCurrentLocation returned null, trying lastKnownLocation");
                         tryLastKnownLocation();
                     }
                 })
                 .addOnFailureListener(e -> {
                     btnGetLocation.setEnabled(true);
-                    Log.e(TAG, "Location fetch failed", e);
                     tryLastKnownLocation();
                 });
     }
@@ -200,8 +198,7 @@ public class CreateRequestActivity extends AppCompatActivity {
             if (location != null) {
                 updateLocationData(location);
             } else {
-                tvLocationStatus.setText("Location not found. Please verify GPS is ON and try again.");
-                Toast.makeText(this, "Failed to get location. Try moving slightly or checking settings.", Toast.LENGTH_LONG).show();
+                tvLocationStatus.setText("Location not found.");
             }
         });
     }
@@ -209,38 +206,31 @@ public class CreateRequestActivity extends AppCompatActivity {
     private void updateLocationData(Location location) {
         latitude = location.getLatitude();
         longitude = location.getLongitude();
-        Log.d(TAG, "Location updated: " + latitude + ", " + longitude);
         getAddressFromLocation(latitude, longitude);
     }
 
     private void getAddressFromLocation(double lat, double lon) {
-        tvLocationStatus.setText("Converting coordinates to address...");
-        
-        // Geocoder should ideally run off-main-thread. Using a simple Handler for feedback.
         new Thread(() -> {
             Geocoder geocoder = new Geocoder(this, Locale.getDefault());
             String resultText;
             String addr;
-
             try {
                 List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
                 if (addresses != null && !addresses.isEmpty()) {
                     Address address = addresses.get(0);
                     addr = address.getAddressLine(0);
-                    resultText = "Location found:\n" + addr;
+                    resultText = "Location: " + addr;
                 } else {
                     addr = "Lat: " + lat + ", Lon: " + lon;
-                    resultText = "Address not found. Using coordinates:\n" + addr;
+                    resultText = "Address not found.";
                 }
             } catch (IOException e) {
-                Log.e(TAG, "Geocoder service failed", e);
                 addr = "Lat: " + lat + ", Lon: " + lon;
-                resultText = "Network error getting address. Using coordinates:\n" + addr;
+                resultText = "Network error.";
             }
 
             final String finalAddr = addr;
             final String finalStatus = resultText;
-            
             new Handler(Looper.getMainLooper()).post(() -> {
                 currentAddress = finalAddr;
                 tvLocationStatus.setText(finalStatus);
@@ -257,17 +247,21 @@ public class CreateRequestActivity extends AppCompatActivity {
         String bloodType = spinnerBloodType.getSelectedItem().toString();
         String requestType = spinnerRequestType.getSelectedItem().toString();
 
-        if (TextUtils.isEmpty(patientName)) { etPatientName.setError("Required"); return; }
-        if (TextUtils.isEmpty(hospital)) { etHospital.setError("Required"); return; }
-        if (TextUtils.isEmpty(unitsStr)) { etUnits.setError("Required"); return; }
-        if (bloodType.equals("Select Blood Type")) { Toast.makeText(this, "Select blood type", Toast.LENGTH_SHORT).show(); return; }
-        
-        if (latitude == 0.0 || longitude == 0.0) {
-            Toast.makeText(this, "Please tap 'Get Current Location' and wait for coordinates.", Toast.LENGTH_LONG).show();
+        if (TextUtils.isEmpty(patientName) || TextUtils.isEmpty(hospital) || TextUtils.isEmpty(unitsStr)) {
+            Toast.makeText(this, "Please fill required fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (bloodType.equals("Select Blood Type")) {
+            Toast.makeText(this, "Select blood type", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (latitude == 0.0) {
+            Toast.makeText(this, "Please capture location", Toast.LENGTH_SHORT).show();
             return;
         }
 
         progressBar.setVisibility(View.VISIBLE);
+        boolean isEmergency = "Emergency".equalsIgnoreCase(requestType);
 
         Map<String, Object> request = new HashMap<>();
         request.put("userId", userId);
@@ -280,10 +274,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         request.put("requestType", requestType);
         request.put("status", "pending");
         request.put("timestamp", System.currentTimeMillis());
-        
-        // Ensure "Emergency" is correctly matched from the spinner values
-        request.put("isEmergency", "Emergency".equalsIgnoreCase(requestType));
-        
+        request.put("isEmergency", isEmergency);
         request.put("latitude", latitude);
         request.put("longitude", longitude);
         request.put("address", currentAddress);
@@ -291,12 +282,55 @@ public class CreateRequestActivity extends AppCompatActivity {
         fStore.collection("blood_requests")
                 .add(request)
                 .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(this, "Request submitted successfully", Toast.LENGTH_SHORT).show();
+                    sendNotificationsToDonors(isEmergency, bloodType, latitude, longitude);
+                    Toast.makeText(this, "Request submitted", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     progressBar.setVisibility(View.GONE);
                 });
+    }
+
+    private void sendNotificationsToDonors(boolean isEmergency, String bloodType, double reqLat, double reqLon) {
+        // Logic to find eligible donors and send notifications.
+        // In a real app, this should be done via Cloud Functions for security and reliability.
+        // Here we simulate it by finding donor FCM tokens from Firestore.
+        
+        fStore.collection("users")
+                .whereEqualTo("role", "donor")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        String token = doc.getString("fcmToken");
+                        if (token == null) continue;
+
+                        Double donorLat = doc.getDouble("latitude");
+                        Double donorLon = doc.getDouble("longitude");
+                        String donorBlood = doc.getString("bloodType");
+
+                        if (isEmergency) {
+                            // Emergency: Within 10km, any blood type
+                            if (donorLat != null && donorLon != null) {
+                                float[] results = new float[1];
+                                Location.distanceBetween(reqLat, reqLon, donorLat, donorLon, results);
+                                if (results[0] <= 10000) { // 10km
+                                    triggerNotification(token, "Emergency", "Emergency blood request near you.");
+                                }
+                            }
+                        } else {
+                            // Normal: Matching blood type
+                            if (bloodType.equals(donorBlood)) {
+                                triggerNotification(token, "Blood Needed", bloodType + " blood requested near your area.");
+                            }
+                        }
+                    }
+                });
+    }
+
+    private void triggerNotification(String token, String title, String body) {
+        // This is a placeholder. To actually send an FCM message from the client,
+        // you would need a server key (not recommended) or use a backend service.
+        Log.d(TAG, "Notification should be sent to: " + token + " | " + title + ": " + body);
     }
 }

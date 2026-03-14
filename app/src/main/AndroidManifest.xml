@@ -10,9 +10,16 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Landing Activity -->
+        <service
+            android:name=".fcm.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
-            android:name=".LandingActivity"
+            android:name=".ui.LandingActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -20,73 +27,26 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.ChooseRoleActivity"
-            android:exported="true" />
-
-        <activity
-            android:name=".ui.login.LoginActivity"
-            android:exported="true" />
-
-        <activity
-            android:name=".ui.register.RegisterActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.register.RegisterSeekerActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.DashboardActivity"
-            android:exported="false"
-            android:parentActivityName=".LandingActivity" />
-
-        <activity
-            android:name=".ui.CreateRequestActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.DashboardActivity" />
-
-        <activity
-            android:name=".ui.ViewRequestsActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:parentActivityName=".ui.DashboardActivity" />
-
-        <activity
-            android:name=".ui.DonorListActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.DashboardActivity" />
-
-        <activity
-            android:name=".ui.ProfileActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.DashboardActivity" />
-
-        <activity
-            android:name=".ui.ManageRequestsActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:parentActivityName=".ui.ProfileActivity" />
-
-        <activity
-            android:name=".ui.EditProfileActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.ProfileActivity" />
-
-        <activity
-            android:name=".ui.AcceptedRequestsActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:parentActivityName=".ui.ProfileActivity" />
+        <activity android:name=".ui.ChooseRoleActivity" android:exported="true" />
+        <activity android:name=".ui.login.LoginActivity" android:exported="true" />
+        <activity android:name=".ui.register.RegisterActivity" android:exported="false" />
+        <activity android:name=".ui.register.RegisterSeekerActivity" android:exported="false" />
+        <activity android:name=".ui.DashboardActivity" android:exported="false" />
+        <activity android:name=".ui.CreateRequestActivity" android:exported="false" />
+        <activity android:name=".ui.ViewRequestsActivity" android:exported="false" />
+        <activity android:name=".ui.DonorListActivity" android:exported="false" />
+        <activity android:name=".ui.ProfileActivity" android:exported="false" />
+        <activity android:name=".ui.ManageRequestsActivity" android:exported="false" />
+        <activity android:name=".ui.EditProfileActivity" android:exported="false" />
+        <activity android:name=".ui.AcceptedRequestsActivity" android:exported="false" />
 
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
-    <!-- Location Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 </manifest>
