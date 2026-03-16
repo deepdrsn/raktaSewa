@@ -61,7 +61,7 @@ public class CreateRequestActivity extends AppCompatActivity {
 
     private static final String TAG = "CreateRequestActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-    private static final String VERCEL_URL = "https://raktasewa-notification-server.vercel.app/api/sendNotification";
+    private static final String VERCEL_URL = "https://raktasewa-notification-server.vercel.app/api/notify";
 
     EditText etPatientName, etHospital, etUnits, etContact, etAdditionalInfo;
     Spinner spinnerBloodType, spinnerRequestType;
