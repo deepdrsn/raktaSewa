@@ -38,16 +38,30 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class CreateRequestActivity extends AppCompatActivity {
 
     private static final String TAG = "CreateRequestActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final String VERCEL_URL = "https://raktasewa-notification-server.vercel.app/api/sendNotification";
 
     EditText etPatientName, etHospital, etUnits, etContact, etAdditionalInfo;
     Spinner spinnerBloodType, spinnerRequestType;
@@ -360,6 +374,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                 .whereEqualTo("role", "donor")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<String> tokens = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         String token = doc.getString("fcmToken");
                         if (token == null) continue;
@@ -372,20 +387,63 @@ public class CreateRequestActivity extends AppCompatActivity {
                             if (donorLat != null && donorLon != null) {
                                 float[] results = new float[1];
                                 Location.distanceBetween(reqLat, reqLon, donorLat, donorLon, results);
-                                if (results[0] <= 10000) {
-                                    triggerNotification(token, "Emergency", "Emergency blood request near you.");
+                                if (results[0] <= 10000) { // 10km radius
+                                    tokens.add(token);
                                 }
                             }
                         } else {
                             if (bloodType.equals(donorBlood)) {
-                                triggerNotification(token, "Blood Needed", bloodType + " blood requested near your area.");
+                                tokens.add(token);
                             }
                         }
+                    }
+                    
+                    if (!tokens.isEmpty()) {
+                        String title = isEmergency ? "EMERGENCY Blood Request" : "Blood Needed";
+                        String body = isEmergency ? "Emergency " + bloodType + " blood request near you!" 
+                                                   : "A request for " + bloodType + " blood has been made in your area.";
+                        triggerNotification(tokens, title, body);
                     }
                 });
     }
 
-    private void triggerNotification(String token, String title, String body) {
-        Log.d(TAG, "Notification logic should be here or handled by server.");
+    private void triggerNotification(List<String> tokens, String title, String body) {
+        OkHttpClient client = new OkHttpClient();
+        
+        JSONObject json = new JSONObject();
+        try {
+            json.put("title", title);
+            json.put("body", body);
+            json.put("tokens", new JSONArray(tokens));
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        RequestBody reqBody = RequestBody.create(
+            json.toString(), MediaType.parse("application/json; charset=utf-8")
+        );
+
+        Request request = new Request.Builder()
+                .url(VERCEL_URL)
+                .post(reqBody)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                Log.e(TAG, "Notification trigger failed: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Notification trigger successful");
+                } else {
+                    Log.e(TAG, "Notification trigger error: " + response.code());
+                }
+                response.close();
+            }
+        });
     }
 }

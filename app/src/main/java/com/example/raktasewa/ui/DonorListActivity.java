@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -25,10 +26,15 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class DonorListActivity extends AppCompatActivity {
 
@@ -156,7 +162,13 @@ public class DonorListActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     if (task.isSuccessful()) {
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            Boolean isAvailable = document.getBoolean("available");
+                            Boolean isAvailableInDb = document.getBoolean("available");
+                            String lastDonated = document.getString("lastDonatedDate");
+                            
+                            // Check 3-month eligibility rule
+                            boolean isEligible = isEligibleToDonate(lastDonated);
+                            boolean finalAvailability = (isAvailableInDb != null && isAvailableInDb) && isEligible;
+
                             Double lat = document.getDouble("latitude");
                             Double lon = document.getDouble("longitude");
                             String city = document.getString("city");
@@ -166,8 +178,8 @@ public class DonorListActivity extends AppCompatActivity {
                                     document.getString("bloodType"),
                                     document.getString("phone"),
                                     document.getString("address"),
-                                    document.getString("lastDonatedDate"),
-                                    isAvailable != null ? isAvailable : false,
+                                    lastDonated,
+                                    finalAvailability,
                                     lat != null ? lat : 0.0,
                                     lon != null ? lon : 0.0,
                                     city != null ? city : ""
@@ -205,7 +217,7 @@ public class DonorListActivity extends AppCompatActivity {
             }
             return 0;
         });
-        
+
         if (!hasLocation) {
             donorList.addAll(allMatchingDonors);
             updateUIWithResults("Showing all matching donors (Location unavailable)");
@@ -259,6 +271,22 @@ public class DonorListActivity extends AppCompatActivity {
         }
         
         donorAdapter.notifyDataSetChanged();
+    }
+
+    private boolean isEligibleToDonate(String lastDonatedDateStr) {
+        if (TextUtils.isEmpty(lastDonatedDateStr)) return true;
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        try {
+            Date lastDate = sdf.parse(lastDonatedDateStr);
+            if (lastDate == null) return true;
+            
+            long diffInMillis = System.currentTimeMillis() - lastDate.getTime();
+            long diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+            return diffInDays >= 90; // 3 months gap required
+        } catch (ParseException e) {
+            return true;
+        }
     }
 
     private void updateUIWithResults(String message) {

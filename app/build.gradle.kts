@@ -50,7 +50,10 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-messaging") // Added FCM
+    implementation("com.google.firebase:firebase-messaging")
+
+    // Networking (For Vercel API)
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
