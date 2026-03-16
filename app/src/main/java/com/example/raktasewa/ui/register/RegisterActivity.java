@@ -31,10 +31,14 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -197,6 +201,8 @@ public class RegisterActivity extends AppCompatActivity {
     private void saveUserToFirestore(String userID, String name, String email, String phone, String address, String blood, String gender, String lastDonated, String fcmToken) {
         DocumentReference documentReference = fStore.collection("users").document(userID);
 
+        boolean isEligible = isEligibleToDonate(lastDonated);
+
         Map<String, Object> user = new HashMap<>();
         user.put("role", "donor");
         user.put("fullName", name);
@@ -208,7 +214,7 @@ public class RegisterActivity extends AppCompatActivity {
         user.put("lastDonatedDate", lastDonated);
         user.put("latitude", latitude);
         user.put("longitude", longitude);
-        user.put("available", true);
+        user.put("available", isEligible); // Set availability based on date
         if (fcmToken != null) user.put("fcmToken", fcmToken);
 
         documentReference.set(user).addOnSuccessListener(aVoid -> {
@@ -223,5 +229,21 @@ public class RegisterActivity extends AppCompatActivity {
             startActivity(new Intent(getApplicationContext(), LoginActivity.class));
             finishAffinity();
         });
+    }
+
+    private boolean isEligibleToDonate(String lastDonatedDateStr) {
+        if (TextUtils.isEmpty(lastDonatedDateStr)) return true;
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        try {
+            Date lastDate = sdf.parse(lastDonatedDateStr);
+            if (lastDate == null) return true;
+            
+            long diffInMillis = System.currentTimeMillis() - lastDate.getTime();
+            long diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+            return diffInDays >= 90; // 3 months gap required
+        } catch (ParseException e) {
+            return true;
+        }
     }
 }

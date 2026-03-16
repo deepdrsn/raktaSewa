@@ -23,10 +23,12 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestViewHolder> {
 
@@ -233,29 +235,56 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         }
 
         private void showAcceptConfirmationDialog(BloodRequest request) {
-            // Check blood group matching
-            if (userBloodType == null) {
-                Toast.makeText(context, "Please complete your profile with blood type first.", Toast.LENGTH_SHORT).show();
-                return;
-            }
+            fStore.collection("users").document(currentUserId).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            String lastDonated = documentSnapshot.getString("lastDonatedDate");
+                            boolean isAvailable = documentSnapshot.getBoolean("available") != null && documentSnapshot.getBoolean("available");
 
-            if (!userBloodType.equalsIgnoreCase(request.getBloodType())) {
-                Toast.makeText(context, "You can only accept requests matching your blood group (" + userBloodType + ").", Toast.LENGTH_LONG).show();
-                return;
-            }
+                            if (!isAvailable || !isEligibleToDonate(lastDonated)) {
+                                Toast.makeText(context, "You are not eligible to donate yet. Please wait 3 months between donations.", Toast.LENGTH_LONG).show();
+                                return;
+                            }
 
-            // Check if donor already has an accepted request that is not yet fulfilled
-            fStore.collection("blood_requests")
-                    .whereEqualTo("donorId", currentUserId)
-                    .whereEqualTo("status", "accepted")
-                    .get()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                            Toast.makeText(context, "You already have an active accepted request. Please fulfill it first.", Toast.LENGTH_LONG).show();
-                        } else {
-                            displayConfirmationDialog(request);
+                            if (userBloodType == null) {
+                                Toast.makeText(context, "Please complete your profile with blood type first.", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            if (!userBloodType.equalsIgnoreCase(request.getBloodType())) {
+                                Toast.makeText(context, "You can only accept requests matching your blood group (" + userBloodType + ").", Toast.LENGTH_LONG).show();
+                                return;
+                            }
+
+                            // Check if donor already has an accepted request that is not yet fulfilled
+                            fStore.collection("blood_requests")
+                                    .whereEqualTo("donorId", currentUserId)
+                                    .whereEqualTo("status", "accepted")
+                                    .get()
+                                    .addOnCompleteListener(task -> {
+                                        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                                            Toast.makeText(context, "You already have an active accepted request. Please fulfill it first.", Toast.LENGTH_LONG).show();
+                                        } else {
+                                            displayConfirmationDialog(request);
+                                        }
+                                    });
                         }
                     });
+        }
+
+        private boolean isEligibleToDonate(String lastDonatedDateStr) {
+            if (lastDonatedDateStr == null || lastDonatedDateStr.isEmpty()) return true;
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            try {
+                Date lastDate = sdf.parse(lastDonatedDateStr);
+                if (lastDate == null) return true;
+                long diffInMillis = System.currentTimeMillis() - lastDate.getTime();
+                long diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+                return diffInDays >= 90;
+            } catch (ParseException e) {
+                return true;
+            }
         }
 
         private void displayConfirmationDialog(BloodRequest request) {
