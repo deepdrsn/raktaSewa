@@ -195,13 +195,11 @@ public class DonorListActivity extends AppCompatActivity {
     private void applyRadiusFilter(boolean hasLocation) {
         donorList.clear();
 
-        // Sort: Available donors first, then sort by distance (if location exists)
+        // Sort: Available donors first, then sort by distance
         Collections.sort(allMatchingDonors, (d1, d2) -> {
-            // Priority 1: Availability (true first)
             if (d1.isAvailableToDonate() != d2.isAvailableToDonate()) {
                 return d1.isAvailableToDonate() ? -1 : 1;
             }
-            // Priority 2: Distance (closer first)
             if (hasLocation) {
                 return Double.compare(d1.getDistance(), d2.getDistance());
             }
@@ -215,7 +213,8 @@ public class DonorListActivity extends AppCompatActivity {
             return;
         }
 
-        int[] radii = {5, 10, 15, 20, 25};
+        // Expanded radii to handle rare cases / long distances
+        int[] radii = {5, 10, 15, 20, 25, 50, 100, 200};
         int selectedRadius = -1;
 
         for (int radius : radii) {
@@ -229,7 +228,6 @@ public class DonorListActivity extends AppCompatActivity {
                     }
                 }
             }
-            // Break ONLY if we found at least one AVAILABLE donor in this radius
             if (hasAvailable) {
                 donorList.addAll(filtered);
                 selectedRadius = radius;
@@ -239,14 +237,25 @@ public class DonorListActivity extends AppCompatActivity {
 
         if (donorList.isEmpty()) {
             if (allMatchingDonors.isEmpty()) {
-                updateUIWithResults("No donors found with this blood type.");
+                updateUIWithResults("No donors found with this blood type anywhere.");
             } else {
-                // If no AVAILABLE donors found within 25km, show all matching ones as a fallback
+                // FALLBACK: Show everyone matching (even if 100km+ away)
                 donorList.addAll(allMatchingDonors);
-                updateUIWithResults("No available donors within 25 km. Showing all matches.");
+                
+                boolean anyAvailable = false;
+                for (Donor d : allMatchingDonors) {
+                    if (d.isAvailableToDonate()) { anyAvailable = true; break; }
+                }
+
+                if (anyAvailable) {
+                    updateUIWithResults("No one available nearby. Showing donors from other locations.");
+                } else {
+                    updateUIWithResults("No available donors found. Showing all potential matches.");
+                }
             }
         } else {
-            updateUIWithResults("Found available donors within " + selectedRadius + " km.");
+            String msg = selectedRadius > 50 ? "Found available donors in other cities (" + selectedRadius + " km)." : "Found available donors within " + selectedRadius + " km.";
+            updateUIWithResults(msg);
         }
         
         donorAdapter.notifyDataSetChanged();
