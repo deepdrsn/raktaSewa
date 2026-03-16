@@ -83,7 +83,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         setupSpinners();
 
         btnSubmitRequest.setOnClickListener(v -> submitRequest());
-        btnGetLocation.setOnClickListener(v -> handleGetLocationClick());
+        btnGetLocation.setOnClickListener(v -> handleLocationButtonClick());
     }
 
     private void initializeUI() {
@@ -112,12 +112,75 @@ public class CreateRequestActivity extends AppCompatActivity {
         spinnerRequestType.setAdapter(typeAdapter);
     }
 
-    private void handleGetLocationClick() {
+    private void handleLocationButtonClick() {
+        String[] options = {"Use Current Location", "Enter Hospital Address Manually"};
+        new AlertDialog.Builder(this)
+                .setTitle("Set Hospital Location")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        handleGetGPSLocation();
+                    } else {
+                        showManualLocationDialog();
+                    }
+                })
+                .show();
+    }
+
+    private void handleGetGPSLocation() {
         if (!isLocationEnabled()) {
             showLocationSettingsDialog();
         } else {
             checkLocationPermission();
         }
+    }
+
+    private void showManualLocationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Hospital Address");
+        
+        final EditText input = new EditText(this);
+        input.setHint("e.g. City Hospital, Pokhara");
+        builder.setView(input);
+
+        builder.setPositiveButton("Set Location", (dialog, which) -> {
+            String address = input.getText().toString().trim();
+            if (!TextUtils.isEmpty(address)) {
+                getCoordinatesFromAddress(address);
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void getCoordinatesFromAddress(String addressStr) {
+        tvLocationStatus.setText("Searching location...");
+        new Thread(() -> {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            try {
+                List<Address> addresses = geocoder.getFromLocationName(addressStr, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    latitude = address.getLatitude();
+                    longitude = address.getLongitude();
+                    currentAddress = address.getAddressLine(0);
+
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        tvLocationStatus.setText("Location: " + currentAddress);
+                        Toast.makeText(this, "Hospital location set.", Toast.LENGTH_SHORT).show();
+                    });
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        tvLocationStatus.setText("Location not found.");
+                        Toast.makeText(this, "Could not find address. Try being more specific.", Toast.LENGTH_LONG).show();
+                    });
+                }
+            } catch (IOException e) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    tvLocationStatus.setText("Network error.");
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
     }
 
     private boolean isLocationEnabled() {
