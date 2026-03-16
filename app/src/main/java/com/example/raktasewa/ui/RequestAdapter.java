@@ -3,6 +3,7 @@ package com.example.raktasewa.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,16 +20,28 @@ import com.example.raktasewa.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QuerySnapshot;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestViewHolder> {
 
@@ -38,6 +51,9 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
     private Context context;
     private boolean isManageMode;
     private String userBloodType;
+    private String currentUserName;
+
+    private static final String VERCEL_URL = "https://raktasewa-notification-server.vercel.app/api/notify";
 
     public RequestAdapter(Context context, List<BloodRequest> requestList, String userId) {
         this(context, requestList, userId, false);
@@ -49,14 +65,15 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         this.currentUserId = userId;
         this.fStore = FirebaseFirestore.getInstance();
         this.isManageMode = isManageMode;
-        fetchCurrentUserBloodType();
+        fetchCurrentUserDetails();
     }
 
-    private void fetchCurrentUserBloodType() {
+    private void fetchCurrentUserDetails() {
         fStore.collection("users").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         userBloodType = documentSnapshot.getString("bloodType");
+                        currentUserName = documentSnapshot.getString("fullName");
                     }
                 });
     }
@@ -110,7 +127,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         public void bind(BloodRequest request) {
             if (request == null) return;
 
-            // Rule: Automatically expire fulfilled requests after 24 hours
             if ("fulfilled".equalsIgnoreCase(request.getStatus())) {
                 long currentTime = System.currentTimeMillis();
                 long fulfilledTime = request.getFulfilledTimestamp();
@@ -149,15 +165,12 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
             boolean isDonor = currentUserId.equals(request.getDonorId());
             boolean isPending = "pending".equalsIgnoreCase(status);
             boolean isAccepted = "accepted".equalsIgnoreCase(status);
-            boolean isFulfilled = "fulfilled".equalsIgnoreCase(status);
 
-            // Requester name visibility
             if (tvRequesterInfo != null) {
                 tvRequesterInfo.setVisibility(View.VISIBLE);
                 fetchUserName(request.getUserId(), tvRequesterInfo, "Requested by: ");
             }
 
-            // Contact Info visibility: Show if seeker or accepted donor
             if (isRequester || isDonor) {
                 btnContact.setVisibility(View.VISIBLE);
                 btnContact.setOnClickListener(v -> {
@@ -171,7 +184,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 btnContact.setVisibility(View.GONE);
             }
 
-            // Action Button Logic
             btnAction.setVisibility(View.GONE);
             if (isPending && !isRequester) {
                 btnAction.setVisibility(View.VISIBLE);
@@ -183,8 +195,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 btnAction.setOnClickListener(v -> fulfillRequest(request));
             }
 
-            // Donor info visibility for seeker
-            if (isAccepted || isFulfilled) {
+            if (isAccepted || "fulfilled".equalsIgnoreCase(status)) {
                 tvDonorInfo.setVisibility(View.VISIBLE);
                 if (request.getDonorId() != null) {
                     fetchUserName(request.getDonorId(), tvDonorInfo, "Accepted by: ");
@@ -256,7 +267,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                                 return;
                             }
 
-                            // Check if donor already has an accepted request that is not yet fulfilled
                             fStore.collection("blood_requests")
                                     .whereEqualTo("donorId", currentUserId)
                                     .whereEqualTo("status", "accepted")
@@ -274,7 +284,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
 
         private boolean isEligibleToDonate(String lastDonatedDateStr) {
             if (lastDonatedDateStr == null || lastDonatedDateStr.isEmpty()) return true;
-            
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             try {
                 Date lastDate = sdf.parse(lastDonatedDateStr);
@@ -288,11 +297,8 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         }
 
         private void displayConfirmationDialog(BloodRequest request) {
-            String caseType = request.isEmergency() ? "EMERGENCY" : "Normal";
             String info = "Patient: " + request.getPatientName() + "\n" +
                           "Location: " + request.getHospital() + "\n" +
-                          "Address: " + request.getAddress() + "\n" +
-                          "Case: " + caseType + "\n" +
                           "Blood Group: " + request.getBloodType();
 
             new AlertDialog.Builder(context)
@@ -311,8 +317,58 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                         request.setDonorId(currentUserId);
                         notifyItemChanged(getAdapterPosition());
                         Toast.makeText(context, "Request Accepted!", Toast.LENGTH_SHORT).show();
+                        
+                        // Notify the requester
+                        notifyRequester(request.getUserId(), currentUserName);
                     })
                     .addOnFailureListener(e -> Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        }
+
+        private void notifyRequester(String requesterId, String donorName) {
+            fStore.collection("users").document(requesterId).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String token = doc.getString("fcmToken");
+                            if (token != null) {
+                                String title = "Request Accepted!";
+                                String body = donorName + " has accepted your blood request.";
+                                triggerNotification(Collections.singletonList(token), title, body);
+                            }
+                        }
+                    });
+        }
+
+        private void triggerNotification(List<String> tokens, String title, String body) {
+            OkHttpClient client = new OkHttpClient();
+            JSONObject json = new JSONObject();
+            try {
+                json.put("title", title);
+                json.put("body", body);
+                json.put("tokens", new JSONArray(tokens));
+            } catch (JSONException e) {
+                return;
+            }
+
+            RequestBody reqBody = RequestBody.create(
+                json.toString(), MediaType.parse("application/json; charset=utf-8")
+            );
+
+            Request request = new Request.Builder()
+                    .url(VERCEL_URL)
+                    .post(reqBody)
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                    Log.e("Notification", "Failed to notify requester: " + e.getMessage());
+                }
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    response.close();
+                }
+            });
         }
 
         private void fulfillRequest(BloodRequest request) {
