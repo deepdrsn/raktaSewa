@@ -28,56 +28,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/white"
-            android:padding="8dp"
-            android:orientation="vertical">
+            android:padding="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
                 android:id="@+id/tvFilterStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Showing matching requests"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary_dark"/>
+
+            <Button
+                android:id="@+id/btnViewAll"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Showing requests for your blood group"
-                android:textSize="12sp"
-                android:textColor="@color/primary_dark"
-                android:layout_marginStart="4dp"
-                android:layout_marginBottom="4dp"/>
+                android:text="View All"
+                android:textSize="11sp"
+                android:textColor="@color/primary"
+                android:visibility="visible"/>
 
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btnViewAll"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="View All"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="8dp"/>
-
-                    <Button
-                        android:id="@+id/btnPending"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="Pending"
-                        android:textSize="11sp"
-                        android:layout_marginEnd="8dp"/>
-
-                    <Button
-                        android:id="@+id/btnEmergency"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="Emergency"
-                        android:textSize="11sp"
-                        android:backgroundTint="@color/emergency"/>
-
-                </LinearLayout>
-            </HorizontalScrollView>
         </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -148,7 +122,8 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="76dp"
         android:src="@drawable/ic_add"
-        app:backgroundTint="@color/primary"/>
+        app:backgroundTint="@color/primary"
+        app:tint="@android:color/white"/>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigation"

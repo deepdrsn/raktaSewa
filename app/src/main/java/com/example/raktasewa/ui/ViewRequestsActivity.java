@@ -38,7 +38,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private TextView tvEmptyState, tvFilterStatus;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private Button btnViewAllCenter, btnLoadMore;
+    private Button btnViewAll, btnLoadMore;
     private FloatingActionButton fabCreateRequest;
     private Toolbar toolbar;
     private BottomNavigationView bottomNavigation;
@@ -84,7 +84,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
         tvEmptyState = findViewById(R.id.tvEmptyState);
         tvFilterStatus = findViewById(R.id.tvFilterStatus);
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-        btnViewAllCenter = findViewById(R.id.btnViewAll);
+        btnViewAll = findViewById(R.id.btnViewAll);
         btnLoadMore = findViewById(R.id.btnLoadMore);
         fabCreateRequest = findViewById(R.id.fabCreateRequest);
         bottomNavigation = findViewById(R.id.bottomNavigation);
@@ -106,10 +106,10 @@ public class ViewRequestsActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        btnViewAllCenter.setOnClickListener(v -> {
+        btnViewAll.setOnClickListener(v -> {
             isViewAllMode = true;
-            tvFilterStatus.setText("Showing all requests");
-            btnViewAllCenter.setVisibility(View.GONE);
+            tvFilterStatus.setText("Showing all blood groups");
+            btnViewAll.setVisibility(View.GONE);
             refreshData();
         });
         btnLoadMore.setOnClickListener(v -> loadRequests(true));
@@ -158,7 +158,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
 
     private void enableViewAll() {
         isViewAllMode = true;
-        tvFilterStatus.setText("Showing all requests");
+        tvFilterStatus.setText("Showing all blood groups");
         loadRequests(false);
     }
 
@@ -211,7 +211,7 @@ public class ViewRequestsActivity extends AppCompatActivity {
                     tvEmptyState.setVisibility(View.VISIBLE);
                     if (!isViewAllMode) {
                         tvEmptyState.setText("No requests for your blood group (" + userBloodType + ").");
-                        btnViewAllCenter.setVisibility(View.VISIBLE);
+                        btnViewAll.setVisibility(View.VISIBLE);
                     } else {
                         tvEmptyState.setText("No blood requests found in the system.");
                     }
