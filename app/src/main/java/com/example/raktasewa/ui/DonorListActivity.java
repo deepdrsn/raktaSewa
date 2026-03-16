@@ -194,6 +194,19 @@ public class DonorListActivity extends AppCompatActivity {
 
     private void applyRadiusFilter(boolean hasLocation) {
         donorList.clear();
+
+        // Sort: Available donors first, then sort by distance (if location exists)
+        Collections.sort(allMatchingDonors, (d1, d2) -> {
+            // Priority 1: Availability
+            if (d1.isAvailable() != d2.isAvailable()) {
+                return d1.isAvailable() ? -1 : 1;
+            }
+            // Priority 2: Distance
+            if (hasLocation) {
+                return Double.compare(d1.getDistance(), d2.getDistance());
+            }
+            return 0;
+        });
         
         if (!hasLocation) {
             donorList.addAll(allMatchingDonors);
@@ -201,8 +214,6 @@ public class DonorListActivity extends AppCompatActivity {
             donorAdapter.notifyDataSetChanged();
             return;
         }
-
-        Collections.sort(allMatchingDonors, Comparator.comparingDouble(Donor::getDistance));
 
         int[] radii = {5, 10, 15, 20, 25};
         int selectedRadius = -1;

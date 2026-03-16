@@ -50,7 +50,7 @@ public class DashboardActivity extends AppCompatActivity {
 
     private TextView tvUserName, tvDonorBloodType, tvLastDonated, tvEligibilityMessage, tvActiveRequestsCount, tvAvailableDonorsCount;
     private SwitchMaterial switchAvailability;
-    private MaterialCardView cardDonorStatus, btnEmergencyRequest, btnCreateRequest, btnFindDonors, btnViewRequests, btnProfile;
+    private MaterialCardView cardDonorStatus, btnEmergencyRequest, btnFindDonors, btnViewRequests, btnProfile;
     private RecyclerView rvNearbyRequests;
     private ProgressBar pbRequests;
     private BottomNavigationView bottomNavigation;
@@ -101,7 +101,6 @@ public class DashboardActivity extends AppCompatActivity {
         switchAvailability = findViewById(R.id.switchAvailability);
         cardDonorStatus = findViewById(R.id.cardDonorStatus);
         btnEmergencyRequest = findViewById(R.id.btnEmergencyRequest);
-        btnCreateRequest = findViewById(R.id.btnCreateRequest);
         btnFindDonors = findViewById(R.id.btnFindDonors);
         btnViewRequests = findViewById(R.id.btnViewRequests);
         btnProfile = findViewById(R.id.btnProfile);
@@ -126,7 +125,6 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        btnCreateRequest.setOnClickListener(v -> startActivity(new Intent(this, CreateRequestActivity.class)));
         btnFindDonors.setOnClickListener(v -> startActivity(new Intent(this, DonorListActivity.class)));
         btnViewRequests.setOnClickListener(v -> startActivity(new Intent(this, ViewRequestsActivity.class)));
         btnProfile.setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
