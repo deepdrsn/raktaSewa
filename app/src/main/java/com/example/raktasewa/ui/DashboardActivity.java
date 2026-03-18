@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,6 +33,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -47,6 +50,7 @@ public class DashboardActivity extends AppCompatActivity {
 
     private static final String TAG = "DashboardActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1003;
 
     private TextView tvUserName, tvDonorBloodType, tvLastDonated, tvEligibilityMessage, tvActiveRequestsCount, tvAvailableDonorsCount;
     private SwitchMaterial switchAvailability;
@@ -88,6 +92,9 @@ public class DashboardActivity extends AppCompatActivity {
         loadUserProfile();
         loadQuickStats();
         loadNearbyRequests();
+        
+        requestNotificationPermission();
+        updateFCMToken();
     }
 
     private void initializeUI() {
@@ -108,6 +115,26 @@ public class DashboardActivity extends AppCompatActivity {
         pbRequests = findViewById(R.id.pbRequests);
         bottomNavigation = findViewById(R.id.bottomNavigation);
         ivNotifications = findViewById(R.id.ivNotifications);
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE);
+            }
+        }
+    }
+
+    private void updateFCMToken() {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    fStore.collection("users").document(currentUser.getUid())
+                            .update("fcmToken", token)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM Token updated successfully"))
+                            .addOnFailureListener(e -> Log.e(TAG, "Failed to update FCM token", e));
+                });
     }
 
     private void setupRecyclerView() {
