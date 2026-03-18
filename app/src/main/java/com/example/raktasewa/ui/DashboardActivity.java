@@ -138,7 +138,9 @@ public class DashboardActivity extends AppCompatActivity {
             updateAvailability(isChecked);
         });
         
-        ivNotifications.setOnClickListener(v -> Toast.makeText(this, "No new notifications", Toast.LENGTH_SHORT).show());
+        ivNotifications.setOnClickListener(v -> {
+            startActivity(new Intent(DashboardActivity.this, NotificationActivity.class));
+        });
     }
 
     private void setupBottomNavigation() {
