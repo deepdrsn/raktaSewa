@@ -50,7 +50,7 @@ public class DashboardActivity extends AppCompatActivity {
 
     private TextView tvUserName, tvDonorBloodType, tvLastDonated, tvEligibilityMessage, tvActiveRequestsCount, tvAvailableDonorsCount;
     private SwitchMaterial switchAvailability;
-    private MaterialCardView cardDonorStatus, btnEmergencyRequest, btnFindDonors, btnViewRequests, btnProfile;
+    private MaterialCardView cardDonorStatus, btnEmergencyRequest, btnFindDonors, btnViewRequests;
     private RecyclerView rvNearbyRequests;
     private ProgressBar pbRequests;
     private BottomNavigationView bottomNavigation;
@@ -103,7 +103,6 @@ public class DashboardActivity extends AppCompatActivity {
         btnEmergencyRequest = findViewById(R.id.btnEmergencyRequest);
         btnFindDonors = findViewById(R.id.btnFindDonors);
         btnViewRequests = findViewById(R.id.btnViewRequests);
-        btnProfile = findViewById(R.id.btnProfile);
         
         rvNearbyRequests = findViewById(R.id.rvNearbyRequests);
         pbRequests = findViewById(R.id.pbRequests);
@@ -127,7 +126,6 @@ public class DashboardActivity extends AppCompatActivity {
 
         btnFindDonors.setOnClickListener(v -> startActivity(new Intent(this, DonorListActivity.class)));
         btnViewRequests.setOnClickListener(v -> startActivity(new Intent(this, ViewRequestsActivity.class)));
-        btnProfile.setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
 
         switchAvailability.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked && !isEligibleToDonate()) {
