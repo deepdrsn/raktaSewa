@@ -31,8 +31,10 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -325,17 +327,34 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         }
 
         private void notifyRequester(String requesterId, String donorName) {
+            String title = "Request Accepted!";
+            String body = donorName + " has accepted your blood request.";
+            
+            // 1. Save to Firestore Notification History
+            saveNotificationToDb(requesterId, title, body);
+            
+            // 2. Trigger Push Notification via FCM
             fStore.collection("users").document(requesterId).get()
                     .addOnSuccessListener(doc -> {
                         if (doc.exists()) {
                             String token = doc.getString("fcmToken");
                             if (token != null) {
-                                String title = "Request Accepted!";
-                                String body = donorName + " has accepted your blood request.";
                                 triggerNotification(Collections.singletonList(token), title, body);
                             }
                         }
                     });
+        }
+
+        private void saveNotificationToDb(String targetUserId, String title, String body) {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("title", title);
+            notification.put("body", body);
+            notification.put("timestamp", System.currentTimeMillis());
+            notification.put("isRead", false);
+            notification.put("type", "acceptance");
+
+            fStore.collection("users").document(targetUserId)
+                    .collection("notifications").add(notification);
         }
 
         private void triggerNotification(List<String> tokens, String title, String body) {

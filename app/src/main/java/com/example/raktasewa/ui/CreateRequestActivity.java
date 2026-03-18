@@ -376,10 +376,12 @@ public class CreateRequestActivity extends AppCompatActivity {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<String> tokens = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        String token = doc.getString("fcmToken");
                         String donorId = doc.getId();
-                        if (token == null) continue;
+                        
+                        // Don't notify the person who made the request
+                        if (donorId.equals(userId)) continue;
 
+                        String token = doc.getString("fcmToken");
                         Double donorLat = doc.getDouble("latitude");
                         Double donorLon = doc.getDouble("longitude");
                         String donorBlood = doc.getString("bloodType");
@@ -389,20 +391,25 @@ public class CreateRequestActivity extends AppCompatActivity {
                             if (donorLat != null && donorLon != null) {
                                 float[] results = new float[1];
                                 Location.distanceBetween(reqLat, reqLon, donorLat, donorLon, results);
-                                if (results[0] <= 10000) {
+                                if (results[0] <= 10000) { // 10km radius for emergency
                                     shouldNotify = true;
                                 }
                             }
                         } else {
-                            if (bloodType.equals(donorBlood)) {
+                            if (bloodType.equalsIgnoreCase(donorBlood)) {
                                 shouldNotify = true;
                             }
                         }
 
                         if (shouldNotify) {
-                            tokens.add(token);
+                            // Always save to database so it's in history
                             saveNotificationToDb(donorId, isEmergency ? "EMERGENCY Blood Request" : "Blood Needed", 
                                     "A request for " + bloodType + " blood has been made in your area.");
+                            
+                            // Collect tokens for push notification
+                            if (token != null) {
+                                tokens.add(token);
+                            }
                         }
                     }
                     
