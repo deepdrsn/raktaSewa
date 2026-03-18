@@ -59,7 +59,10 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="false" />
 
-        <activity android:name=".ui.NotificationActivity" android:exported="false" />
+        <activity 
+            android:name=".ui.NotificationActivity" 
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false" />
 
     </application>
 
