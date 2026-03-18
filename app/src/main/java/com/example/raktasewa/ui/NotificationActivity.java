@@ -68,6 +68,7 @@ public class NotificationActivity extends AppCompatActivity {
                         notificationList.clear();
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             NotificationModel notification = document.toObject(NotificationModel.class);
+                            notification.setNotificationId(document.getId());
                             notificationList.add(notification);
                         }
                         adapter.notifyDataSetChanged();

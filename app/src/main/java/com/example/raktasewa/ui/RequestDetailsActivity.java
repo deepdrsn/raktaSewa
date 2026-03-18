@@ -1,5 +1,8 @@
 package com.example.raktasewa.ui;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -109,6 +112,22 @@ public class RequestDetailsActivity extends AppCompatActivity {
         btnContact = findViewById(R.id.btnContact);
         btnFulfill = findViewById(R.id.btnFulfill);
         progressBar = findViewById(R.id.progressBar);
+
+        tvAddress.setOnClickListener(v -> {
+            String addressText = tvAddress.getText().toString();
+            if (!addressText.isEmpty() && !addressText.equals("Full Address here")) {
+                copyToClipboard(addressText);
+            }
+        });
+    }
+
+    private void copyToClipboard(String text) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Hospital Address", text);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Address copied to clipboard", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void fetchCurrentUserDetails() {
