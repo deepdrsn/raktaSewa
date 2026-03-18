@@ -377,24 +377,32 @@ public class CreateRequestActivity extends AppCompatActivity {
                     List<String> tokens = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         String token = doc.getString("fcmToken");
+                        String donorId = doc.getId();
                         if (token == null) continue;
 
                         Double donorLat = doc.getDouble("latitude");
                         Double donorLon = doc.getDouble("longitude");
                         String donorBlood = doc.getString("bloodType");
 
+                        boolean shouldNotify = false;
                         if (isEmergency) {
                             if (donorLat != null && donorLon != null) {
                                 float[] results = new float[1];
                                 Location.distanceBetween(reqLat, reqLon, donorLat, donorLon, results);
-                                if (results[0] <= 10000) { // 10km radius
-                                    tokens.add(token);
+                                if (results[0] <= 10000) {
+                                    shouldNotify = true;
                                 }
                             }
                         } else {
                             if (bloodType.equals(donorBlood)) {
-                                tokens.add(token);
+                                shouldNotify = true;
                             }
+                        }
+
+                        if (shouldNotify) {
+                            tokens.add(token);
+                            saveNotificationToDb(donorId, isEmergency ? "EMERGENCY Blood Request" : "Blood Needed", 
+                                    "A request for " + bloodType + " blood has been made in your area.");
                         }
                     }
                     
@@ -405,6 +413,18 @@ public class CreateRequestActivity extends AppCompatActivity {
                         triggerNotification(tokens, title, body);
                     }
                 });
+    }
+
+    private void saveNotificationToDb(String targetUserId, String title, String body) {
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("title", title);
+        notification.put("body", body);
+        notification.put("timestamp", System.currentTimeMillis());
+        notification.put("isRead", false);
+        notification.put("type", "request");
+
+        fStore.collection("users").document(targetUserId)
+                .collection("notifications").add(notification);
     }
 
     private void triggerNotification(List<String> tokens, String title, String body) {

@@ -59,6 +59,8 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="false" />
 
+        <activity android:name=".ui.NotificationActivity" android:exported="false" />
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
