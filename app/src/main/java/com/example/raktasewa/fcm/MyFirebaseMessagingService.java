@@ -13,10 +13,13 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.raktasewa.ui.LandingActivity;
 import com.example.raktasewa.R;
+import com.example.raktasewa.ui.RequestDetailsActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+
+import java.util.Map;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
@@ -27,13 +30,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
+        String title = "";
+        String body = "";
+        String requestId = null;
+
         if (remoteMessage.getNotification() != null) {
-            sendNotification(remoteMessage.getNotification().getTitle(), remoteMessage.getNotification().getBody());
-        } else if (remoteMessage.getData().size() > 0) {
-            String title = remoteMessage.getData().get("title");
-            String body = remoteMessage.getData().get("body");
-            sendNotification(title, body);
+            title = remoteMessage.getNotification().getTitle();
+            body = remoteMessage.getNotification().getBody();
         }
+
+        if (remoteMessage.getData().size() > 0) {
+            Map<String, String> data = remoteMessage.getData();
+            if (title.isEmpty()) title = data.get("title");
+            if (body.isEmpty()) body = data.get("body");
+            requestId = data.get("requestId");
+        }
+
+        sendNotification(title, body, requestId);
     }
 
     @Override
@@ -53,10 +66,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void sendNotification(String title, String body) {
-        Intent intent = new Intent(this, LandingActivity.class);
+    private void sendNotification(String title, String body, String requestId) {
+        Intent intent;
+        if (requestId != null && !requestId.isEmpty()) {
+            intent = new Intent(this, RequestDetailsActivity.class);
+            intent.putExtra("requestId", requestId);
+        } else {
+            intent = new Intent(this, LandingActivity.class);
+        }
+        
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent,
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder notificationBuilder =
@@ -78,6 +98,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationManager.createNotificationChannel(channel);
         }
 
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager.notify((int) System.currentTimeMillis(), notificationBuilder.build());
     }
 }

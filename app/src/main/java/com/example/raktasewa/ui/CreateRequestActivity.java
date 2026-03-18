@@ -359,7 +359,7 @@ public class CreateRequestActivity extends AppCompatActivity {
         fStore.collection("blood_requests")
                 .add(request)
                 .addOnSuccessListener(documentReference -> {
-                    sendNotificationsToDonors(isEmergency, bloodType, latitude, longitude);
+                    sendNotificationsToDonors(documentReference.getId(), isEmergency, bloodType, latitude, longitude);
                     Toast.makeText(this, "Request submitted", Toast.LENGTH_SHORT).show();
                     finish();
                 })
@@ -369,7 +369,7 @@ public class CreateRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void sendNotificationsToDonors(boolean isEmergency, String bloodType, double reqLat, double reqLon) {
+    private void sendNotificationsToDonors(String requestId, boolean isEmergency, String bloodType, double reqLat, double reqLon) {
         fStore.collection("users")
                 .whereEqualTo("role", "donor")
                 .get()
@@ -403,7 +403,7 @@ public class CreateRequestActivity extends AppCompatActivity {
 
                         if (shouldNotify) {
                             // Always save to database so it's in history
-                            saveNotificationToDb(donorId, isEmergency ? "EMERGENCY Blood Request" : "Blood Needed", 
+                            saveNotificationToDb(donorId, requestId, isEmergency ? "EMERGENCY Blood Request" : "Blood Needed", 
                                     "A request for " + bloodType + " blood has been made in your area.");
                             
                             // Collect tokens for push notification
@@ -417,24 +417,25 @@ public class CreateRequestActivity extends AppCompatActivity {
                         String title = isEmergency ? "EMERGENCY Blood Request" : "Blood Needed";
                         String body = isEmergency ? "Emergency " + bloodType + " blood request near you!" 
                                                    : "A request for " + bloodType + " blood has been made in your area.";
-                        triggerNotification(tokens, title, body);
+                        triggerNotification(tokens, requestId, title, body);
                     }
                 });
     }
 
-    private void saveNotificationToDb(String targetUserId, String title, String body) {
+    private void saveNotificationToDb(String targetUserId, String requestId, String title, String body) {
         Map<String, Object> notification = new HashMap<>();
         notification.put("title", title);
         notification.put("body", body);
         notification.put("timestamp", System.currentTimeMillis());
         notification.put("isRead", false);
         notification.put("type", "request");
+        notification.put("requestId", requestId);
 
         fStore.collection("users").document(targetUserId)
                 .collection("notifications").add(notification);
     }
 
-    private void triggerNotification(List<String> tokens, String title, String body) {
+    private void triggerNotification(List<String> tokens, String requestId, String title, String body) {
         OkHttpClient client = new OkHttpClient();
         
         JSONObject json = new JSONObject();
@@ -442,6 +443,12 @@ public class CreateRequestActivity extends AppCompatActivity {
             json.put("title", title);
             json.put("body", body);
             json.put("tokens", new JSONArray(tokens));
+            
+            JSONObject data = new JSONObject();
+            data.put("requestId", requestId);
+            data.put("type", "request");
+            json.put("data", data);
+            
         } catch (JSONException e) {
             e.printStackTrace();
             return;

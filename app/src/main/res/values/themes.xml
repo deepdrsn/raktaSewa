@@ -18,8 +18,11 @@
         <item name="colorAccent">@color/primary</item>
     </style>
 
-    <!-- For toolbar overlay -->
-    <style name="ThemeOverlay.AppCompat.Dark.ActionBar" parent="">
-        <item name="android:textColorPrimary">@android:color/white</item>
-    </style>
+    <!-- AppBar and Popup Overlays -->
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <!-- Fallback styles for compatibility -->
+    <style name="ThemeOverlay.AppCompat.Dark.ActionBar" parent="Base.ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="ThemeOverlay.AppCompat.Light" parent="Base.ThemeOverlay.AppCompat.Light" />
 </resources>

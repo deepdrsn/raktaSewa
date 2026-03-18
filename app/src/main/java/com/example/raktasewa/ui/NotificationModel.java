@@ -9,17 +9,10 @@ public class NotificationModel {
     private String type;
     private boolean isRead;
     private String notificationId;
+    private String requestId;
 
     public NotificationModel() {
         // Required for Firestore
-    }
-
-    public NotificationModel(String title, String body, long timestamp, String type) {
-        this.title = title;
-        this.body = body;
-        this.timestamp = timestamp;
-        this.type = type;
-        this.isRead = false;
     }
 
     public String getTitle() { return title; }
@@ -42,4 +35,7 @@ public class NotificationModel {
 
     public String getNotificationId() { return notificationId; }
     public void setNotificationId(String notificationId) { this.notificationId = notificationId; }
+
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 }
