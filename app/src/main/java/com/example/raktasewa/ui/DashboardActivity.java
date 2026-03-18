@@ -1,11 +1,8 @@
 package com.example.raktasewa.ui;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,7 +26,6 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -38,18 +34,14 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class DashboardActivity extends AppCompatActivity {
 
     private static final String TAG = "DashboardActivity";
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1002;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1003;
 
     private TextView tvUserName, tvDonorBloodType, tvLastDonated, tvEligibilityMessage, tvActiveRequestsCount, tvAvailableDonorsCount;
@@ -192,7 +184,10 @@ public class DashboardActivity extends AppCompatActivity {
     private void loadUserProfile() {
         fStore.collection("users").document(currentUser.getUid())
                 .addSnapshotListener((document, error) -> {
-                    if (error != null) return;
+                    if (error != null) {
+                        Log.e(TAG, "Error loading profile", error);
+                        return;
+                    }
                     if (document != null && document.exists()) {
                         String name = document.getString("fullName");
                         tvUserName.setText(name != null ? name : "User");
@@ -268,22 +263,22 @@ public class DashboardActivity extends AppCompatActivity {
     }
 
     private void loadQuickStats() {
-        // Active Requests
         fStore.collection("blood_requests")
                 .whereEqualTo("status", "pending")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     tvActiveRequestsCount.setText(String.valueOf(queryDocumentSnapshots.size()));
-                });
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error stats requests", e));
 
-        // Available Donors
         fStore.collection("users")
                 .whereEqualTo("role", "donor")
                 .whereEqualTo("available", true)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     tvAvailableDonorsCount.setText(String.valueOf(queryDocumentSnapshots.size()));
-                });
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error stats donors", e));
     }
 
     private void loadNearbyRequests() {
@@ -309,7 +304,6 @@ public class DashboardActivity extends AppCompatActivity {
                             if (request != null) {
                                 request.setRequestId(doc.getId());
                                 
-                                // SOURCE FILTER: Exclude expired fulfilled requests
                                 if ("fulfilled".equalsIgnoreCase(request.getStatus())) {
                                     long fulfilledTime = request.getFulfilledTimestamp();
                                     if (fulfilledTime > 0 && (currentTime - fulfilledTime) > oneDayMillis) {
