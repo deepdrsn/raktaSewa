@@ -301,10 +301,22 @@ public class DashboardActivity extends AppCompatActivity {
                     }
                     if (value != null) {
                         requestList.clear();
+                        long currentTime = System.currentTimeMillis();
+                        long oneDayMillis = 24 * 60 * 60 * 1000;
+                        
                         for (DocumentSnapshot doc : value.getDocuments()) {
                             BloodRequest request = doc.toObject(BloodRequest.class);
                             if (request != null) {
                                 request.setRequestId(doc.getId());
+                                
+                                // SOURCE FILTER: Exclude expired fulfilled requests
+                                if ("fulfilled".equalsIgnoreCase(request.getStatus())) {
+                                    long fulfilledTime = request.getFulfilledTimestamp();
+                                    if (fulfilledTime > 0 && (currentTime - fulfilledTime) > oneDayMillis) {
+                                        continue;
+                                    }
+                                }
+                                
                                 requestList.add(request);
                             }
                         }

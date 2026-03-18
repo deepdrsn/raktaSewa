@@ -129,6 +129,7 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
         public void bind(BloodRequest request) {
             if (request == null) return;
 
+            // EXPIRY LOGIC: Hide fulfilled requests older than 24 hours
             if ("fulfilled".equalsIgnoreCase(request.getStatus())) {
                 long currentTime = System.currentTimeMillis();
                 long fulfilledTime = request.getFulfilledTimestamp();
@@ -137,10 +138,11 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                     itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
                     return;
                 }
-            } else {
-                itemView.setVisibility(View.VISIBLE);
-                itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             }
+            
+            // Ensure view is visible if not expired
+            itemView.setVisibility(View.VISIBLE);
+            itemView.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             tvPatientName.setText(request.getPatientName() != null ? request.getPatientName() : "Unknown Patient");
             tvHospital.setText(request.getHospital() != null ? request.getHospital() : "Unknown Hospital");
@@ -173,10 +175,8 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 fetchUserName(request.getUserId(), tvRequesterInfo, "Requested by: ");
             }
 
-            // Contact logic for Seeker (isRequester)
             if (isRequester) {
                 if (isAccepted && request.getDonorId() != null) {
-                    // Seeker can only contact donor if request is accepted
                     btnContact.setVisibility(View.VISIBLE);
                     btnContact.setOnClickListener(v -> {
                         fStore.collection("users").document(request.getDonorId()).get()
@@ -194,11 +194,9 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                                 });
                     });
                 } else {
-                    // Pending or Fulfilled: Seeker doesn't need to contact themselves
                     btnContact.setVisibility(View.GONE);
                 }
             } else {
-                // If the user is NOT the requester (they are a potential or actual donor)
                 if (isPending || isDonor) {
                     btnContact.setVisibility(View.VISIBLE);
                     btnContact.setOnClickListener(v -> {
@@ -428,11 +426,6 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                         Toast.makeText(context, "Marked as Fulfilled!", Toast.LENGTH_SHORT).show();
                     })
                     .addOnFailureListener(e -> Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-        }
-
-        private void fulfillDonationRecord(BloodRequest request) {
-            // Already handled by seeker marking fulfilled? 
-            // In a real app, you might want to log this specifically in the donor's history too.
         }
 
         private void fetchUserName(String userId, TextView tv, String prefix) {

@@ -86,7 +86,6 @@ public class ManageRequestsActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         requestList = new ArrayList<>();
-        // Note: isManageMode = true
         requestAdapter = new RequestAdapter(this, requestList, userId, true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(requestAdapter);
@@ -106,9 +105,21 @@ public class ManageRequestsActivity extends AppCompatActivity {
                     swipeRefreshLayout.setRefreshing(false);
 
                     if (task.isSuccessful()) {
+                        long currentTime = System.currentTimeMillis();
+                        long oneDayMillis = 24 * 60 * 60 * 1000;
+
                         for (QueryDocumentSnapshot document : task.getResult()) {
                             BloodRequest request = document.toObject(BloodRequest.class);
                             request.setRequestId(document.getId());
+                            
+                            // SOURCE FILTER: Only add if not an expired fulfilled request
+                            if ("fulfilled".equalsIgnoreCase(request.getStatus())) {
+                                long fulfilledTime = request.getFulfilledTimestamp();
+                                if (fulfilledTime > 0 && (currentTime - fulfilledTime) > oneDayMillis) {
+                                    continue; // Skip expired request
+                                }
+                            }
+                            
                             requestList.add(request);
                         }
 
@@ -134,6 +145,6 @@ public class ManageRequestsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadRequests(); // Refresh list when returning from CreateRequestActivity
+        loadRequests(); 
     }
 }

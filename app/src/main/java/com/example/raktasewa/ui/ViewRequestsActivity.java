@@ -195,13 +195,23 @@ public class ViewRequestsActivity extends AppCompatActivity {
 
             if (task.isSuccessful() && task.getResult() != null) {
                 List<DocumentSnapshot> documents = task.getResult().getDocuments();
-                
+                long currentTime = System.currentTimeMillis();
+                long oneDayMillis = 24 * 60 * 60 * 1000;
+
                 if (!documents.isEmpty()) {
                     lastVisible = documents.get(documents.size() - 1);
                     for (DocumentSnapshot doc : documents) {
                         BloodRequest req = doc.toObject(BloodRequest.class);
                         if (req != null) {
                             req.setRequestId(doc.getId());
+                            
+                            // SOURCE FILTER: Exclude expired fulfilled requests
+                            if ("fulfilled".equalsIgnoreCase(req.getStatus())) {
+                                long fulfilledTime = req.getFulfilledTimestamp();
+                                if (fulfilledTime > 0 && (currentTime - fulfilledTime) > oneDayMillis) {
+                                    continue;
+                                }
+                            }
                             requestList.add(req);
                         }
                     }
@@ -242,12 +252,23 @@ public class ViewRequestsActivity extends AppCompatActivity {
         query.get().addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 List<DocumentSnapshot> documents = task.getResult().getDocuments();
+                long currentTime = System.currentTimeMillis();
+                long oneDayMillis = 24 * 60 * 60 * 1000;
+
                 if (!documents.isEmpty()) {
                     lastVisible = documents.get(documents.size() - 1);
                     for (DocumentSnapshot doc : documents) {
                         BloodRequest req = doc.toObject(BloodRequest.class);
                         if (req != null) {
                             req.setRequestId(doc.getId());
+                            
+                            // SOURCE FILTER: Exclude expired fulfilled requests
+                            if ("fulfilled".equalsIgnoreCase(req.getStatus())) {
+                                long fulfilledTime = req.getFulfilledTimestamp();
+                                if (fulfilledTime > 0 && (currentTime - fulfilledTime) > oneDayMillis) {
+                                    continue;
+                                }
+                            }
                             requestList.add(req);
                         }
                     }
