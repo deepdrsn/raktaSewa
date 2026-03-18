@@ -173,17 +173,44 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                 fetchUserName(request.getUserId(), tvRequesterInfo, "Requested by: ");
             }
 
-            if (isRequester || isDonor) {
-                btnContact.setVisibility(View.VISIBLE);
-                btnContact.setOnClickListener(v -> {
-                    if (request.getContact() != null) {
-                        Intent intent = new Intent(Intent.ACTION_DIAL);
-                        intent.setData(Uri.parse("tel:" + request.getContact()));
-                        context.startActivity(intent);
-                    }
-                });
+            // Contact logic for Seeker (isRequester)
+            if (isRequester) {
+                if (isAccepted && request.getDonorId() != null) {
+                    // Seeker can only contact donor if request is accepted
+                    btnContact.setVisibility(View.VISIBLE);
+                    btnContact.setOnClickListener(v -> {
+                        fStore.collection("users").document(request.getDonorId()).get()
+                                .addOnSuccessListener(documentSnapshot -> {
+                                    if (documentSnapshot.exists()) {
+                                        String phone = documentSnapshot.getString("phone");
+                                        if (phone != null) {
+                                            Intent intent = new Intent(Intent.ACTION_DIAL);
+                                            intent.setData(Uri.parse("tel:" + phone));
+                                            context.startActivity(intent);
+                                        } else {
+                                            Toast.makeText(context, "Donor phone not found", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                });
+                    });
+                } else {
+                    // Pending or Fulfilled: Seeker doesn't need to contact themselves
+                    btnContact.setVisibility(View.GONE);
+                }
             } else {
-                btnContact.setVisibility(View.GONE);
+                // If the user is NOT the requester (they are a potential or actual donor)
+                if (isPending || isDonor) {
+                    btnContact.setVisibility(View.VISIBLE);
+                    btnContact.setOnClickListener(v -> {
+                        if (request.getContact() != null) {
+                            Intent intent = new Intent(Intent.ACTION_DIAL);
+                            intent.setData(Uri.parse("tel:" + request.getContact()));
+                            context.startActivity(intent);
+                        }
+                    });
+                } else {
+                    btnContact.setVisibility(View.GONE);
+                }
             }
 
             btnAction.setVisibility(View.GONE);
@@ -401,6 +428,11 @@ public class RequestAdapter extends RecyclerView.Adapter<RequestAdapter.RequestV
                         Toast.makeText(context, "Marked as Fulfilled!", Toast.LENGTH_SHORT).show();
                     })
                     .addOnFailureListener(e -> Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        }
+
+        private void fulfillDonationRecord(BloodRequest request) {
+            // Already handled by seeker marking fulfilled? 
+            // In a real app, you might want to log this specifically in the donor's history too.
         }
 
         private void fetchUserName(String userId, TextView tv, String prefix) {
